@@ -1,692 +1,542 @@
 
-import streamlit as st
-import pandas as pd
-import numpy as np
+import os
 import joblib
-from pathlib import Path
+import numpy as np
+import pandas as pd
+import streamlit as st
 
-# ==================================================
-# 1. PAGE CONFIGURATION
-# ==================================================
+# --------------------------------------------------
+# PAGE CONFIGURATION
+# --------------------------------------------------
 st.set_page_config(
-    page_title="Career Compass | AI Career Recommendation",
-    page_icon="🧭",
+    page_title="AI Career Recommendation System",
+    page_icon="🎯",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
-# ==================================================
-# 2. INITIALIZE SESSION STATE
-# ==================================================
-defaults = {
-    "page": "welcome",
-    "name": "",
-    "profession": "Student",
-    "other_role": "",
-    "skill_scores": None,
-    "results": None
+MODEL_PATH = "career_model.joblib"
+
+FEATURES = [
+    "Python",
+    "Maths",
+    "Communication",
+    "Creativity",
+    "Business",
+    "Design",
+    "ProblemSolving",
+    "DataAnalysis"
+]
+
+CAREER_DETAILS = {
+    "Data Scientist": {
+        "description": "Analyze data and build predictive models to solve business problems.",
+        "skills": ["Python", "Statistics", "SQL", "Machine Learning", "Data Visualization"],
+        "develop": ["Practice pandas and NumPy", "Learn SQL", "Build ML projects"],
+        "icon": "📊"
+    },
+    "Software Developer": {
+        "description": "Design, develop, test, and maintain software applications.",
+        "skills": ["Programming", "Problem Solving", "Java", "Python", "Git"],
+        "develop": ["Practice coding problems", "Learn data structures", "Build applications"],
+        "icon": "💻"
+    },
+    "Business Analyst": {
+        "description": "Understand business requirements and turn information into useful decisions.",
+        "skills": ["Communication", "SQL", "Excel", "Business Analysis", "Critical Thinking"],
+        "develop": ["Improve Excel skills", "Practice SQL queries", "Learn requirement gathering"],
+        "icon": "📈"
+    },
+    "UI UX Designer": {
+        "description": "Create user-friendly digital products and engaging user experiences.",
+        "skills": ["Creativity", "UI Design", "UX Research", "Wireframing", "Figma"],
+        "develop": ["Learn Figma", "Create wireframes", "Build a design portfolio"],
+        "icon": "🎨"
+    },
+    "Digital Marketer": {
+        "description": "Promote products and services using digital channels and marketing strategies.",
+        "skills": ["Communication", "Creativity", "SEO", "Content Strategy", "Analytics"],
+        "develop": ["Learn SEO basics", "Practice content planning", "Study campaign analytics"],
+        "icon": "📱"
+    }
 }
 
-for key, value in defaults.items():
-    if key not in st.session_state:
-        st.session_state[key] = value
-
-
-def go_to(page):
-    st.session_state["page"] = page
-    st.rerun()
-
-
-# ==================================================
-# 3. PROFESSIONAL DESIGN
-# ==================================================
+# --------------------------------------------------
+# CUSTOM CSS
+# --------------------------------------------------
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+    .stApp {
+        background-color: #f5f7fb;
+    }
 
-.stApp {
-    background: linear-gradient(135deg, #0b1120, #111b35, #17122e);
-    color: #f5f7ff;
-    font-family: 'DM Sans', sans-serif;
-}
+    .main-title {
+        font-size: 38px;
+        font-weight: 800;
+        color: #243b64;
+        text-align: center;
+        margin-bottom: 8px;
+    }
 
-.block-container {
-    max-width: 1150px;
-    padding-top: 2rem;
-    padding-bottom: 3rem;
-}
+    .subtitle {
+        color: #64748b;
+        text-align: center;
+        font-size: 16px;
+        margin-bottom: 25px;
+    }
 
-h1, h2, h3, h4 {
-    color: #ffffff;
-    font-family: 'Space Grotesk', sans-serif;
-}
+    .career-card {
+        background: white;
+        padding: 22px;
+        border-radius: 15px;
+        border: 1px solid #e2e8f0;
+        margin-bottom: 18px;
+    }
 
-.hero {
-    background: linear-gradient(135deg, #18284b, #30235b);
-    border: 1px solid #435783;
-    border-radius: 24px;
-    padding: 32px;
-    margin-bottom: 22px;
-}
+    .career-heading {
+        font-size: 23px;
+        font-weight: 700;
+        color: #243b64;
+    }
 
-.eyebrow {
-    color: #76e5f4;
-    letter-spacing: 2px;
-    font-size: 12px;
-    font-weight: 700;
-}
+    .score {
+        color: #2563eb;
+        font-weight: 700;
+        font-size: 18px;
+    }
 
-.gradient {
-    background: linear-gradient(90deg, #76e5f4, #c5a7ff);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-.muted {
-    color: #bdc9e2;
-    line-height: 1.8;
-}
-
-.feature-card {
-    background: #182440;
-    border: 1px solid #344668;
-    border-radius: 17px;
-    padding: 20px;
-    min-height: 155px;
-    margin-bottom: 12px;
-}
-
-.career-card {
-    background: #172440;
-    border: 1px solid #3b4d70;
-    border-radius: 16px;
-    padding: 20px;
-    margin: 12px 0;
-}
-
-div.stButton > button {
-    min-height: 45px;
-    border-radius: 11px;
-    font-weight: 600;
-    border: 1px solid #455b83;
-}
-
-div.stButton > button[kind="primary"] {
-    background: linear-gradient(90deg, #635bdb, #8657d9);
-    color: white;
-    border: none;
-}
-
-div.stButton > button:hover {
-    border-color: #76e5f4;
-    color: #76e5f4;
-}
-
-div[data-testid="stForm"] {
-    background: #151f38;
-    border: 1px solid #344668;
-    padding: 24px;
-    border-radius: 18px;
-}
-
-.stProgress > div > div {
-    background: linear-gradient(90deg, #7565ef, #76e5f4);
-}
-
-footer {
-    visibility: hidden;
-}
+    div.stButton > button {
+        width: 100%;
+        border-radius: 10px;
+        font-weight: 600;
+        min-height: 45px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 
-# ==================================================
-# 4. LOAD TRAINED MODEL
-# ==================================================
+# --------------------------------------------------
+# MODEL LOADING
+# --------------------------------------------------
 @st.cache_resource
 def load_model():
-    model_path = Path(__file__).parent / "career_model.joblib"
+    """Load the saved model. Return None if it cannot be loaded."""
+    if not os.path.exists(MODEL_PATH):
+        return None
 
-    if not model_path.exists():
-        raise FileNotFoundError(
-            "career_model.joblib must be in the same folder as app.py."
-        )
-
-    return joblib.load(model_path)
-
-
-try:
-    model = load_model()
-except Exception as error:
-    st.error("Unable to load the career prediction model.")
-    st.write(
-        "Check that career_model.joblib is uploaded to GitHub "
-        "beside app.py and that requirements.txt is correct."
-    )
-    st.exception(error)
-    st.stop()
+    try:
+        return joblib.load(MODEL_PATH)
+    except Exception:
+        return None
 
 
-# ==================================================
-# 5. CAREER INFORMATION
-# ==================================================
-career_info = {
-    "Data Scientist": {
-        "icon": "📊",
-        "description": "Analyses data and develops predictive models.",
-        "skills": ["Python", "Maths", "DataAnalysis", "ProblemSolving"]
-    },
-    "Data Analyst": {
-        "icon": "📈",
-        "description": "Turns data into reports, charts and useful insights.",
-        "skills": ["DataAnalysis", "Maths", "Python", "Communication"]
-    },
-    "Software Developer": {
-        "icon": "💻",
-        "description": "Builds and maintains applications and software.",
-        "skills": ["Python", "ProblemSolving", "Maths"]
-    },
-    "Business Analyst": {
-        "icon": "💼",
-        "description": "Connects business needs with data-driven decisions.",
-        "skills": ["Business", "Communication", "DataAnalysis"]
-    },
-    "UI UX Designer": {
-        "icon": "🎨",
-        "description": "Designs useful and user-friendly digital experiences.",
-        "skills": ["Design", "Creativity", "Communication"]
-    },
-    "Digital Marketer": {
-        "icon": "📣",
-        "description": "Plans online marketing campaigns and studies audiences.",
-        "skills": ["Communication", "Creativity", "Business"]
-    },
-    "Machine Learning Engineer": {
-        "icon": "🤖",
-        "description": "Builds systems that learn patterns from data.",
-        "skills": ["Python", "Maths", "DataAnalysis", "ProblemSolving"]
-    },
-    "Cybersecurity Analyst": {
-        "icon": "🛡️",
-        "description": "Helps protect systems, networks and information.",
-        "skills": ["ProblemSolving", "Python", "Maths"]
-    }
-}
+model = load_model()
 
 
-def find_career_info(career):
-    for label, info in career_info.items():
-        if label.lower() == str(career).strip().lower():
-            return info
+# --------------------------------------------------
+# CAREER SCORING FALLBACK
+# Used when the saved ML model is unavailable.
+# These are heuristic scores, not trained ML predictions.
+# --------------------------------------------------
+def calculate_fallback_scores(student):
+    python = student["Python"]
+    maths = student["Maths"]
+    communication = student["Communication"]
+    creativity = student["Creativity"]
+    business = student["Business"]
+    design = student["Design"]
+    problem_solving = student["ProblemSolving"]
+    data_analysis = student["DataAnalysis"]
 
-    return {
-        "icon": "✨",
-        "description": (
-            "Explore this career to learn about its responsibilities, "
-            "qualifications and required skills."
+    scores = {
+        "Data Scientist": (
+            0.25 * python
+            + 0.25 * maths
+            + 0.20 * data_analysis
+            + 0.20 * problem_solving
+            + 0.10 * creativity
         ),
-        "skills": [
-            "Python", "Communication", "ProblemSolving"
-        ]
+        "Software Developer": (
+            0.35 * python
+            + 0.30 * problem_solving
+            + 0.15 * maths
+            + 0.10 * creativity
+            + 0.10 * data_analysis
+        ),
+        "Business Analyst": (
+            0.25 * communication
+            + 0.25 * business
+            + 0.20 * data_analysis
+            + 0.15 * maths
+            + 0.15 * problem_solving
+        ),
+        "UI UX Designer": (
+            0.35 * design
+            + 0.25 * creativity
+            + 0.20 * communication
+            + 0.10 * problem_solving
+            + 0.10 * business
+        ),
+        "Digital Marketer": (
+            0.30 * communication
+            + 0.25 * creativity
+            + 0.25 * business
+            + 0.10 * data_analysis
+            + 0.10 * design
+        )
     }
 
+    # Convert scores to a relative percentage distribution.
+    total = sum(max(score, 0) for score in scores.values())
 
-# ==================================================
-# 6. SIDEBAR
-# ==================================================
-with st.sidebar:
-    st.markdown("## 🧭 Career Compass")
-    st.caption("AI Career Recommendation System")
-    st.divider()
-
-    if st.button("🏠 Home", use_container_width=True):
-        go_to("welcome")
-
-    if st.button("👤 My Profile", use_container_width=True):
-        go_to("profile")
-
-    if st.button("🧠 Skill Assessment", use_container_width=True):
-        go_to("assessment")
-
-    if st.button("🎯 My Results", use_container_width=True):
-        if st.session_state["results"] is not None:
-            go_to("results")
-        else:
-            st.warning("Complete the assessment to view results.")
-
-    st.divider()
-    st.caption("Discover your potential. Explore your future.")
-
-
-# ==================================================
-# 7. PAGE ONE: WELCOME
-# ==================================================
-if st.session_state["page"] == "welcome":
-
-    left, right = st.columns([1.1, 0.9], gap="large")
-
-    with left:
-        st.markdown("""
-        <div class="hero">
-            <div class="eyebrow">AI-POWERED CAREER EXPLORATION</div>
-            <h1 style="font-size:44px;line-height:1.15;">
-                Discover Your<br>
-                <span class="gradient">Career Direction.</span>
-            </h1>
-            <p class="muted">
-                Your skills are the beginning of your story.
-                Discover career possibilities, understand your strengths,
-                and take your next step with confidence.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown("### Your future starts here")
-        st.markdown("""
-        <p class="muted">
-        Complete a simple profile, assess your skills, and explore
-        three career options suggested by your trained machine-learning
-        model.
-        </p>
-        """, unsafe_allow_html=True)
-
-        if st.button(
-            "🚀 Get Started",
-            type="primary",
-            use_container_width=True
-        ):
-            go_to("profile")
-
-        st.caption("Simple assessment · Personalised results · Career exploration")
-
-    with right:
-        st.image(
-            "https://images.unsplash.com/photo-1521737711867-e3b97375f902"
-            "?auto=format&fit=crop&w=1000&q=85",
-            use_container_width=True
-        )
-
-        st.markdown("""
-        <div class="feature-card">
-            <h3>🧭 Your Career Compass</h3>
-            <p class="muted">
-                Understand your current strengths, discover new
-                possibilities, and identify skills you can develop.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("---")
-    st.markdown("### Your journey in three steps")
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-        st.markdown("""
-        <div class="feature-card">
-            <h3>01 👤 Profile</h3>
-            <p>Enter your name and current role.</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with c2:
-        st.markdown("""
-        <div class="feature-card">
-            <h3>02 🧠 Assessment</h3>
-            <p>Rate your skills from beginner to confident.</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with c3:
-        st.markdown("""
-        <div class="feature-card">
-            <h3>03 🎯 Results</h3>
-            <p>Explore three career recommendations and explanations.</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.caption(
-        "This tool supports career exploration; it does not guarantee "
-        "career success or employment."
-    )
-
-
-# ==================================================
-# 8. PAGE TWO: USER PROFILE
-# ==================================================
-elif st.session_state["page"] == "profile":
-
-    st.markdown("## 👤 Let's get to know you")
-    st.markdown(
-        '<p class="muted">Tell us a little about yourself before '
-        'starting your assessment.</p>',
-        unsafe_allow_html=True
-    )
-
-    with st.form("profile_form"):
-        name = st.text_input(
-            "Your name",
-            value=st.session_state["name"],
-            placeholder="Enter your name"
-        )
-
-        roles = [
-            "Student",
-            "Working Professional",
-            "Job Seeker",
-            "Entrepreneur",
-            "Other"
+    if total <= 0:
+        return [
+            {"career": career, "score": 20.0}
+            for career in CAREER_DETAILS
         ]
 
-        current_role = st.session_state["profession"]
-        if current_role not in roles:
-            current_role = "Other"
-
-        profession = st.selectbox(
-            "Your current role",
-            roles,
-            index=roles.index(current_role)
-        )
-
-        other_role = ""
-        if profession == "Other":
-            other_role = st.text_input(
-                "Specify your role",
-                value=st.session_state["other_role"]
-            )
-
-        submitted = st.form_submit_button(
-            "Continue to Assessment →",
-            type="primary",
-            use_container_width=True
-        )
-
-        if submitted:
-            if not name.strip():
-                st.error("Please enter your name.")
-            elif profession == "Other" and not other_role.strip():
-                st.error("Please specify your role.")
-            else:
-                st.session_state["name"] = name.strip()
-                st.session_state["profession"] = profession
-                st.session_state["other_role"] = other_role.strip()
-                go_to("assessment")
-
-    if st.button("← Back to Home"):
-        go_to("welcome")
-
-
-# ==================================================
-# 9. PAGE THREE: SKILL ASSESSMENT
-# ==================================================
-elif st.session_state["page"] == "assessment":
-
-    name = st.session_state["name"] or "Explorer"
-
-    st.markdown(f"## 🧠 {name}, discover your strengths")
-    st.markdown("""
-    <p class="muted">
-    Rate each skill honestly. A rating of 0 means you are a beginner
-    or have no experience, while 10 means you feel very confident.
-    </p>
-    """, unsafe_allow_html=True)
-
-    # IMPORTANT:
-    # These names must match the feature columns used to train the model.
-    skill_names = [
-        "Python",
-        "Maths",
-        "Communication",
-        "Creativity",
-        "Business",
-        "Design",
-        "ProblemSolving",
-        "DataAnalysis"
+    return [
+        {
+            "career": career,
+            "score": round(max(score, 0) / total * 100, 2)
+        }
+        for career, score in scores.items()
     ]
 
-    skill_labels = {
-        "Python": "💻 Python Programming",
-        "Maths": "🔢 Mathematics",
-        "Communication": "💬 Communication",
-        "Creativity": "🎨 Creativity",
-        "Business": "💼 Business Interest",
-        "Design": "🖌️ Design Interest",
-        "ProblemSolving": "🧩 Problem Solving",
-        "DataAnalysis": "📊 Data Analysis"
-    }
 
-    with st.form("assessment_form"):
-        col1, col2 = st.columns(2)
-        scores = {}
+# --------------------------------------------------
+# GENERATE CAREER RECOMMENDATIONS
+# --------------------------------------------------
+def recommend_careers(student):
+    if model is None:
+        return calculate_fallback_scores(student), "skill-based fallback"
 
-        for index, skill in enumerate(skill_names):
-            target = col1 if index % 2 == 0 else col2
-
-            with target:
-                scores[skill] = st.slider(
-                    skill_labels[skill],
-                    min_value=0,
-                    max_value=10,
-                    value=5,
-                    help="Rate your current skill from 0 to 10."
-                )
-
-        submitted = st.form_submit_button(
-            "✨ Generate My Recommendations",
-            type="primary",
-            use_container_width=True
+    try:
+        # Preserve feature names for models trained using DataFrames.
+        input_df = pd.DataFrame(
+            [[student[feature] for feature in FEATURES]],
+            columns=FEATURES
         )
 
-        if submitted:
-            try:
-                # Match the exact feature names and order from training.
-                feature_names = skill_names
+        probabilities = model.predict_proba(input_df)[0]
+        classes = list(model.classes_)
 
-                if hasattr(model, "feature_names_in_"):
-                    feature_names = list(model.feature_names_in_)
-                elif hasattr(model, "named_steps"):
-                    final_estimator = list(model.named_steps.values())[-1]
-                    if hasattr(final_estimator, "feature_names_in_"):
-                        feature_names = list(
-                            final_estimator.feature_names_in_
-                        )
+        if len(probabilities) != len(classes):
+            raise ValueError("Prediction output does not match model classes.")
 
-                missing = [
-                    feature for feature in feature_names
-                    if feature not in scores
-                ]
+        results = []
 
-                if missing:
-                    st.error(
-                        "The saved model expects different input features: "
-                        + ", ".join(missing)
-                        + ". Update skill_names to match your training data."
-                    )
-                elif not hasattr(model, "predict_proba"):
-                    st.error(
-                        "The saved model does not support predict_proba(). "
-                        "Use a compatible classifier to rank recommendations."
-                    )
-                else:
-                    input_data = pd.DataFrame([{
-                        feature: scores[feature]
-                        for feature in feature_names
-                    }])
+        for career, probability in zip(classes, probabilities):
+            results.append({
+                "career": str(career),
+                "score": round(float(probability) * 100, 2)
+            })
 
-                    probabilities = model.predict_proba(input_data)[0]
+        results.sort(key=lambda item: item["score"], reverse=True)
 
-                    if hasattr(model, "classes_"):
-                        classes = model.classes_
-                    elif hasattr(model, "named_steps"):
-                        final_estimator = list(
-                            model.named_steps.values()
-                        )[-1]
-                        classes = final_estimator.classes_
-                    else:
-                        raise ValueError(
-                            "Unable to find the model's career labels."
-                        )
+        if not results:
+            raise ValueError("The model returned no career results.")
 
-                    # Rank the model's career classes by score.
-                    ranked = np.argsort(probabilities)[::-1][:3]
+        return results, "trained ML model"
 
-                    results = []
-                    for index in ranked:
-                        results.append({
-                            "career": str(classes[index]),
-                            "score": float(probabilities[index]) * 100
-                        })
+    except Exception as error:
+        # A model may have been trained with a different input format.
+        try:
+            input_array = np.array(
+                [[student[feature] for feature in FEATURES]],
+                dtype=float
+            )
 
-                    st.session_state["skill_scores"] = scores
-                    st.session_state["results"] = results
+            probabilities = model.predict_proba(input_array)[0]
+            classes = list(model.classes_)
 
-                    go_to("results")
+            results = [
+                {
+                    "career": str(career),
+                    "score": round(float(probability) * 100, 2)
+                }
+                for career, probability in zip(classes, probabilities)
+            ]
 
-            except Exception as error:
-                st.error("Could not generate career recommendations.")
-                st.exception(error)
+            results.sort(key=lambda item: item["score"], reverse=True)
 
-    if st.button("← Back to Profile"):
-        go_to("profile")
+            if results:
+                return results, "trained ML model"
 
+        except Exception:
+            pass
 
-# ==================================================
-# 10. PAGE FOUR: TOP 3 RECOMMENDATIONS
-# ==================================================
-elif st.session_state["page"] == "results":
-
-    results = st.session_state["results"]
-    scores = st.session_state["skill_scores"]
-
-    if not results or not scores:
-        st.warning("Please complete your skill assessment first.")
-        if st.button("Start Assessment"):
-            go_to("assessment")
-        st.stop()
-
-    name = st.session_state["name"] or "Explorer"
-
-    st.markdown(f"## 🎯 Your Career Results, {name}")
-    st.markdown("""
-    <p class="muted">
-    Explore the three careers ranked highest by your model.
-    Each suggestion includes related skills and areas to develop.
-    </p>
-    """, unsafe_allow_html=True)
-
-    best_career = results[0]["career"]
-    best_info = find_career_info(best_career)
-
-    st.markdown(f"""
-    <div class="hero">
-        <div class="eyebrow">YOUR TOP MODEL RECOMMENDATION</div>
-        <h1>
-            {best_info["icon"]}
-            <span class="gradient">{best_career}</span>
-        </h1>
-        <p class="muted">{best_info["description"]}</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("### 🏆 Top 3 career recommendations")
-
-    for rank, result in enumerate(results, start=1):
-        career = result["career"]
-        score = result["score"]
-        info = find_career_info(career)
-        related_skills = info["skills"]
-
-        st.markdown(f"""
-        <div class="career-card">
-            <div class="eyebrow">RECOMMENDATION {rank}</div>
-            <h2>{info["icon"]} {career}</h2>
-            <p class="muted">{info["description"]}</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-        st.progress(
-            max(0.0, min(score / 100.0, 1.0)),
-            text=f"Model score: {score:.1f}%"
+        st.warning(
+            "The saved model could not process these inputs. "
+            "Showing skill-based recommendations instead."
         )
+        return calculate_fallback_scores(student), "skill-based fallback"
 
-        st.markdown("#### 💡 Why explore this career?")
 
-        strong_skills = [
-            skill for skill in related_skills
-            if skill in scores and scores[skill] >= 7
-        ]
+# --------------------------------------------------
+# SIDEBAR
+# --------------------------------------------------
+with st.sidebar:
+    st.title("🎯 Career Navigator")
+    st.write("Discover career paths based on your skills.")
 
-        developing_skills = [
-            skill for skill in related_skills
-            if skill in scores and 4 <= scores[skill] < 7
-        ]
+    st.divider()
 
-        if strong_skills:
-            st.write(
-                "**Your stronger related self-ratings:** "
-                + ", ".join(
-                    f"{skill} ({scores[skill]}/10)"
-                    for skill in strong_skills
-                )
-            )
-
-        if developing_skills:
-            st.write(
-                "**Skills you can continue developing:** "
-                + ", ".join(
-                    f"{skill} ({scores[skill]}/10)"
-                    for skill in developing_skills
-                )
-            )
-
-        if not strong_skills and not developing_skills:
-            st.write(
-                "This is a career option suggested by the model. "
-                "Explore its responsibilities and practise the relevant skills "
-                "to decide whether it fits your interests."
-            )
-
-        st.write("**Related skills:** " + ", ".join(related_skills))
-        st.divider()
-
-    st.markdown("### 📊 Your skill assessment summary")
-
-    skill_chart = pd.DataFrame({
-        "Skill": list(scores.keys()),
-        "Self-rating": list(scores.values())
-    }).set_index("Skill")
-
-    st.bar_chart(skill_chart, y="Self-rating")
-
-    st.info(
-        "How to interpret the results: The model score is the classifier's "
-        "output for the supplied skills, not the probability of succeeding "
-        "in that career. The explanations use manually defined career-skill "
-        "associations and your self-ratings; they are not a direct explanation "
-        "of the model's internal decisions."
+    student_name = st.text_input(
+        "Student name",
+        value="",
+        placeholder="Enter your name"
     )
 
-    col1, col2 = st.columns(2)
+    st.caption("Rate each skill from 0 to 10.")
+    st.caption("0 = Beginner | 10 = Very strong")
 
-    with col1:
-        if st.button("🔄 Retake Assessment", use_container_width=True):
-            st.session_state["results"] = None
-            st.session_state["skill_scores"] = None
-            go_to("assessment")
+    st.divider()
 
-    with col2:
-        if st.button("🏠 Back to Home", use_container_width=True):
-            go_to("welcome")
+    st.markdown("### Your skill ratings")
+
+    skill_values = {}
+
+    for feature in FEATURES:
+        skill_values[feature] = st.slider(
+            feature,
+            min_value=0,
+            max_value=10,
+            value=5,
+            step=1,
+            key=f"skill_{feature}"
+        )
+
+    st.divider()
+
+    analyze = st.button(
+        "🚀 Recommend Careers",
+        type="primary",
+        use_container_width=True
+    )
 
 
-# ==================================================
-# 11. FOOTER
-# ==================================================
-st.markdown("---")
+# --------------------------------------------------
+# MAIN PAGE
+# --------------------------------------------------
 st.markdown(
-    "<p style='text-align:center;color:#9aabc9;'>"
-    "CAREER COMPASS | AI CAREER RECOMMENDATION SYSTEM<br>"
-    "Career exploration powered by machine learning"
-    "</p>",
+    '<div class="main-title">🎯 AI Career Recommendation System</div>',
     unsafe_allow_html=True
+)
+
+st.markdown(
+    '<div class="subtitle">'
+    'Discover career paths that align with your skills, interests, '
+    'and strengths.'
+    '</div>',
+    unsafe_allow_html=True
+)
+
+# Welcome section
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric("Career Options", len(CAREER_DETAILS))
+
+with col2:
+    st.metric("Skills Evaluated", len(FEATURES))
+
+with col3:
+    st.metric("Rating Scale", "0–10")
+
+st.divider()
+
+st.subheader("📋 About this system")
+st.write(
+    "Rate your skills in the sidebar and click **Recommend Careers**. "
+    "The application ranks suitable career options and suggests skills "
+    "you can develop next."
+)
+
+if model is None:
+    st.info(
+        "No usable saved model was loaded. The app will use a transparent, "
+        "skill-based scoring method. To use trained ML predictions, add a "
+        "compatible career_model.joblib file."
+    )
+
+# --------------------------------------------------
+# RESULTS
+# --------------------------------------------------
+if analyze:
+
+    student = {
+        feature: int(skill_values[feature])
+        for feature in FEATURES
+    }
+
+    results, method = recommend_careers(student)
+
+    # Critical fix: normalize and validate results before indexing.
+    if isinstance(results, pd.DataFrame):
+        # Support a DataFrame with Career/Score or career/score columns.
+        results = results.rename(columns={
+            "Career": "career",
+            "Score": "score",
+            "Probability": "score"
+        }).to_dict(orient="records")
+
+    if not isinstance(results, list):
+        st.error("Career results are in an unsupported format.")
+        st.stop()
+
+    results = [
+        item for item in results
+        if isinstance(item, dict) and item.get("career") is not None
+    ]
+
+    if not results:
+        st.error(
+            "No career recommendations were generated. "
+            "Please check your model and try again."
+        )
+        st.stop()
+
+    results.sort(
+        key=lambda item: float(item.get("score", 0)),
+        reverse=True
+    )
+
+    # Avoid the original error:
+    # results[0]["career"] when results is empty or incorrectly structured.
+    best_career = results[0]["career"]
+
+    display_name = student_name.strip() or "Student"
+
+    st.success(f"Analysis completed for {display_name}!")
+
+    st.markdown(
+        f"## 🎯 Your Career Results, {display_name}"
+    )
+
+    st.write(
+        "Explore the three careers ranked highest by your model. "
+        "Each suggestion includes related skills and areas to develop."
+    )
+
+    st.caption(
+        "Recommendation method: " + method +
+        ". These results are guidance, not a guarantee of career success."
+    )
+
+    # Top three recommendations
+    top_results = results[:3]
+
+    for rank, item in enumerate(top_results, start=1):
+
+        career = item["career"]
+
+        try:
+            score = float(item.get("score", 0))
+        except (TypeError, ValueError):
+            score = 0.0
+
+        details = CAREER_DETAILS.get(
+            career,
+            {
+                "description": "Explore this career and its requirements.",
+                "skills": ["Research the required skills"],
+                "develop": ["Explore beginner courses", "Build practical projects"],
+                "icon": "🌟"
+            }
+        )
+
+        st.markdown(
+            f"""
+            <div class="career-card">
+                <div class="career-heading">
+                    {details["icon"]} #{rank} {career}
+                </div>
+                <p>{details["description"]}</p>
+                <div class="score">Relative score: {score:.2f}%</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        left, right = st.columns(2)
+
+        with left:
+            st.markdown("**💡 Related skills**")
+            for skill in details["skills"]:
+                st.markdown(f"- {skill}")
+
+        with right:
+            st.markdown("**📚 Areas to develop**")
+            for skill in details["develop"]:
+                st.markdown(f"- {skill}")
+
+        st.divider()
+
+    # Skill profile
+    st.subheader("📊 Your Skill Profile")
+
+    skill_df = pd.DataFrame({
+        "Skill": FEATURES,
+        "Rating": [student[feature] for feature in FEATURES]
+    })
+
+    st.bar_chart(
+        skill_df.set_index("Skill"),
+        y="Rating",
+        y_min=0,
+        y_max=10
+    )
+
+    # Full career ranking
+    st.subheader("🏆 Complete Career Ranking")
+
+    ranking_df = pd.DataFrame(results)
+    ranking_df = ranking_df.rename(columns={
+        "career": "Career",
+        "score": "Score (%)"
+    })
+
+    st.dataframe(
+        ranking_df,
+        use_container_width=True,
+        hide_index=True
+    )
+
+    # Download report
+    report_df = pd.DataFrame([{
+        "Student": display_name,
+        "Top Career": best_career,
+        "Recommendation Method": method,
+        **student
+    }])
+
+    st.download_button(
+        label="⬇️ Download Career Report (CSV)",
+        data=report_df.to_csv(index=False).encode("utf-8"),
+        file_name="career_recommendation_report.csv",
+        mime="text/csv"
+    )
+
+else:
+    st.info(
+        "👈 Rate your skills in the sidebar and click "
+        "**Recommend Careers** to view your results."
+    )
+
+    st.markdown("### 🌟 Available career paths")
+
+    columns = st.columns(3)
+
+    for index, (career, details) in enumerate(CAREER_DETAILS.items()):
+        with columns[index % 3]:
+            st.markdown(f"#### {details['icon']} {career}")
+            st.write(details["description"])
+
+st.divider()
+
+st.caption(
+    "AI Career Recommendation System | Educational project | "
+    "Recommendations should be considered alongside your interests "
+    "and career research."
 )
