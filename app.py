@@ -1,139 +1,223 @@
 
-import streamlit as st
-import pandas as pd
-import numpy as np
-import joblib
-from pathlib import Path
+# --------------------------------------------------
+# LAST PAGE: TOP 3 CAREER RECOMMENDATIONS
+# --------------------------------------------------
+elif st.session_state["page"] == "results":
 
-st.set_page_config(
-    page_title="AI Career Recommendation System",
-    page_icon="🧭",
-    layout="wide"
-)
+    st.title("🎯 Your Top 3 Career Recommendations")
 
-# IMPORTANT: Initialize state before checking the page
-if "page" not in st.session_state:
-    st.session_state["page"] = "welcome"
-
-if "name" not in st.session_state:
-    st.session_state["name"] = ""
-
-if "profession" not in st.session_state:
-    st.session_state["profession"] = "Student"
-
-if "other_role" not in st.session_state:
-    st.session_state["other_role"] = ""
-
-if "results" not in st.session_state:
-    st.session_state["results"] = None
-
-if "skill_scores" not in st.session_state:
-    st.session_state["skill_scores"] = None
-
-# Your page conditions must come AFTER initialization
-if st.session_state["page"] == "welcome":
-    st.title("🧭 Career Compass")
-    st.subheader("Discover Your Career Direction")
     st.write(
-        "Explore career options based on your skills, strengths, "
-        "and interests."
+        f"Hello, {st.session_state['name']}! "
+        "Here are your career suggestions based on your skill assessment."
     )
 
-    st.image(
-        "https://images.unsplash.com/photo-1521737711867-e3b97375f902"
-        "?auto=format&fit=crop&w=1200&q=85",
-        use_container_width=True
-    )
+    # Load the trained model
+    model_path = Path(__file__).parent / "career_model.joblib"
 
-    if st.button("🚀 Get Started", type="primary"):
-        st.session_state["page"] = "profile"
-        st.rerun()
+    try:
+        model = joblib.load(model_path)
 
-elif st.session_state["page"] == "profile":
-    st.title("👤 Your Profile")
+        # Get the user's saved skill ratings
+        scores = st.session_state.get("skill_scores")
 
-    with st.form("profile_form"):
-        name = st.text_input("Enter your name")
-        profession = st.selectbox(
-            "Select your role",
-            [
-                "Student",
-                "Working Professional",
-                "Job Seeker",
-                "Entrepreneur",
-                "Other"
+        if not scores:
+            st.warning("Please complete the skill assessment first.")
+            if st.button("Go to Assessment"):
+                st.session_state["page"] = "assessment"
+                st.rerun()
+            st.stop()
+
+        # Build input using the same feature names and order
+        # that were used during model training.
+        input_data = pd.DataFrame([scores])
+
+        if hasattr(model, "feature_names_in_"):
+            input_data = input_data[list(model.feature_names_in_)]
+
+        # Predict career recommendations
+        if not hasattr(model, "predict_proba"):
+            st.error(
+                "Your saved model does not support ranked recommendations. "
+                "Please use a classifier that supports predict_proba()."
+            )
+            st.stop()
+
+        probabilities = model.predict_proba(input_data)[0]
+
+        # Get career labels from the trained model
+        if hasattr(model, "named_steps"):
+            classifier = list(model.named_steps.values())[-1]
+            career_labels = classifier.classes_
+        else:
+            career_labels = model.classes_
+
+        # Sort from highest to lowest model score
+        ranked_indices = np.argsort(probabilities)[::-1][:3]
+
+        # Manually defined career-skill associations.
+        # Update these names to match your dataset's career labels.
+        career_skills = {
+            "Data Scientist": [
+                "Python", "Maths", "DataAnalysis", "ProblemSolving"
+            ],
+            "Data Analyst": [
+                "DataAnalysis", "Maths", "Python", "Communication"
+            ],
+            "Software Developer": [
+                "Python", "ProblemSolving", "Maths"
+            ],
+            "Business Analyst": [
+                "Business", "Communication", "DataAnalysis"
+            ],
+            "UI UX Designer": [
+                "Design", "Creativity", "Communication"
+            ],
+            "Digital Marketer": [
+                "Communication", "Creativity", "Business"
+            ],
+            "Machine Learning Engineer": [
+                "Python", "Maths", "DataAnalysis", "ProblemSolving"
+            ],
+            "Cybersecurity Analyst": [
+                "ProblemSolving", "Python", "Maths"
             ]
+        }
+
+        career_descriptions = {
+            "Data Scientist":
+                "Analyses data and develops predictive models.",
+            "Data Analyst":
+                "Uses data, charts and reports to support decisions.",
+            "Software Developer":
+                "Builds and maintains applications and software.",
+            "Business Analyst":
+                "Connects business requirements with data-driven insights.",
+            "UI UX Designer":
+                "Designs user-friendly digital products and interfaces.",
+            "Digital Marketer":
+                "Plans online marketing campaigns and studies audiences.",
+            "Machine Learning Engineer":
+                "Builds systems that learn patterns from data.",
+            "Cybersecurity Analyst":
+                "Helps protect computer systems and information."
+        }
+
+        career_icons = {
+            "Data Scientist": "📊",
+            "Data Analyst": "📈",
+            "Software Developer": "💻",
+            "Business Analyst": "💼",
+            "UI UX Designer": "🎨",
+            "Digital Marketer": "📣",
+            "Machine Learning Engineer": "🤖",
+            "Cybersecurity Analyst": "🛡️"
+        }
+
+        st.markdown("---")
+
+        for rank, idx in enumerate(ranked_indices, start=1):
+
+            career = str(career_labels[idx])
+            score = float(probabilities[idx]) * 100
+
+            skills = career_skills.get(
+                career,
+                ["Python", "Communication", "ProblemSolving"]
+            )
+
+            description = career_descriptions.get(
+                career,
+                "Explore this career to learn about its responsibilities "
+                "and required skills."
+            )
+
+            icon = career_icons.get(career, "✨")
+
+            # Career card
+            st.subheader(f"{rank}. {icon} {career}")
+            st.write(description)
+
+            st.progress(
+                max(0.0, min(score / 100.0, 1.0)),
+                text=f"Model score: {score:.1f}%"
+            )
+
+            # Explain the career using the user's skill ratings
+            st.markdown("**💡 Why explore this career?**")
+
+            strong_skills = [
+                skill for skill in skills
+                if skill in scores and scores[skill] >= 7
+            ]
+
+            developing_skills = [
+                skill for skill in skills
+                if skill in scores and 4 <= scores[skill] < 7
+            ]
+
+            if strong_skills:
+                st.write(
+                    "• Your strongest related self-ratings are: "
+                    + ", ".join(
+                        f"{skill} ({scores[skill]}/10)"
+                        for skill in strong_skills
+                    )
+                    + "."
+                )
+
+            if developing_skills:
+                st.write(
+                    "• You have a developing foundation in: "
+                    + ", ".join(
+                        f"{skill} ({scores[skill]}/10)"
+                        for skill in developing_skills
+                    )
+                    + "."
+                )
+
+            if not strong_skills and not developing_skills:
+                st.write(
+                    "• This career is an option to explore. "
+                    "You can learn more about its required skills "
+                    "and decide whether it interests you."
+                )
+
+            st.markdown("**📚 Skills related to this career**")
+            st.write(", ".join(skills))
+
+            st.markdown("---")
+
+        st.subheader("📊 Your Skill Summary")
+
+        skill_df = pd.DataFrame({
+            "Skill": list(scores.keys()),
+            "Self-Rating": list(scores.values())
+        }).set_index("Skill")
+
+        st.bar_chart(skill_df, y="Self-Rating")
+
+        st.info(
+            "Important: Model scores are the classifier's output scores, "
+            "not guaranteed probabilities of career success. The reasons "
+            "shown here are based on manually defined career-skill "
+            "associations and your self-ratings; they do not explain "
+            "the model's internal decision process."
         )
 
-        submitted = st.form_submit_button("Continue to Assessment")
+        col1, col2 = st.columns(2)
 
-        if submitted:
-            if not name.strip():
-                st.error("Please enter your name.")
-            else:
-                st.session_state["name"] = name.strip()
-                st.session_state["profession"] = profession
+        with col1:
+            if st.button("🔄 Retake Assessment", use_container_width=True):
+                st.session_state["results"] = None
+                st.session_state["skill_scores"] = None
                 st.session_state["page"] = "assessment"
                 st.rerun()
 
-elif st.session_state["page"] == "assessment":
-    st.title("🧠 Skill Assessment")
-    st.write("Rate your current skills from 0 to 10.")
+        with col2:
+            if st.button("🏠 Back to Home", use_container_width=True):
+                st.session_state["page"] = "welcome"
+                st.rerun()
 
-    with st.form("assessment_form"):
-        python_score = st.slider("Python", 0, 10, 5)
-        maths_score = st.slider("Mathematics", 0, 10, 5)
-        communication_score = st.slider("Communication", 0, 10, 5)
-        creativity_score = st.slider("Creativity", 0, 10, 5)
-        business_score = st.slider("Business", 0, 10, 5)
-        design_score = st.slider("Design", 0, 10, 5)
-        problem_solving_score = st.slider("Problem Solving", 0, 10, 5)
-        data_analysis_score = st.slider("Data Analysis", 0, 10, 5)
-
-        submitted = st.form_submit_button("Generate Recommendations")
-
-    if submitted:
-        features = pd.DataFrame([{
-            "Python": python_score,
-            "Maths": maths_score,
-            "Communication": communication_score,
-            "Creativity": creativity_score,
-            "Business": business_score,
-            "Design": design_score,
-            "ProblemSolving": problem_solving_score,
-            "DataAnalysis": data_analysis_score
-        }])
-
-        try:
-            model_path = Path(__file__).parent / "career_model.joblib"
-            model = joblib.load(model_path)
-
-            prediction = model.predict(features)[0]
-
-            st.session_state["results"] = str(prediction)
-            st.session_state["skill_scores"] = features.iloc[0].to_dict()
-            st.session_state["page"] = "results"
-            st.rerun()
-
-        except Exception as error:
-            st.error("Could not generate a prediction.")
-            st.code(str(error))
-
-elif st.session_state["page"] == "results":
-    st.title("🎯 Your Career Recommendation")
-    st.success(
-        f"Hello, {st.session_state['name']}! "
-        f"Your model's suggested career is: "
-        f"{st.session_state['results']}"
-    )
-
-    st.write("Your skill ratings:")
-    st.json(st.session_state["skill_scores"])
-
-    if st.button("Retake Assessment"):
-        st.session_state["page"] = "assessment"
-        st.rerun()
-
-    if st.button("Back to Home"):
-        st.session_state["page"] = "welcome"
-        st.rerun()
+    except Exception as error:
+        st.error("Unable to generate the top 3 recommendations.")
+        st.code(str(error))
