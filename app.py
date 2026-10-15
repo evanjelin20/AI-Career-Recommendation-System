@@ -1,568 +1,789 @@
 
-# ==================================================
-# PAGE 1 - CAREER COMPASS: CREATIVE WELCOME PAGE
-# ==================================================
+import streamlit as st
+import pandas as pd
+import numpy as np
+import joblib
+from pathlib import Path
+
+# --------------------------------------------------
+# 1. PAGE CONFIGURATION
+# --------------------------------------------------
+st.set_page_config(
+    page_title="Career Compass | AI Career Guide",
+    page_icon="🧭",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+# --------------------------------------------------
+# 2. INITIALIZE SESSION STATE FIRST
+# --------------------------------------------------
+defaults = {
+    "page": "welcome",
+    "name": "",
+    "profession": "Student",
+    "other_role": "",
+    "selected_career": None,
+    "results": None,
+    "skill_scores": None
+}
+
+for key, value in defaults.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
+
+# --------------------------------------------------
+# 3. CUSTOM CSS
+# --------------------------------------------------
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+.stApp {
+    background: linear-gradient(145deg, #0b1020 0%, #111a32 55%, #15102a 100%);
+    color: #f5f7ff;
+    font-family: 'DM Sans', sans-serif;
+}
+
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+    max-width: 1150px;
+}
+
+h1, h2, h3 {
+    font-family: 'Space Grotesk', sans-serif;
+    color: #ffffff;
+}
+
+.hero {
+    padding: 42px 32px;
+    border-radius: 25px;
+    background: linear-gradient(120deg, #171f3b, #25204b 65%, #12384a);
+    border: 1px solid rgba(135, 157, 255, 0.25);
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.hero-icon {
+    font-size: 56px;
+    margin-bottom: 8px;
+}
+
+.eyebrow {
+    color: #67e8f9;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+
+.hero h1 {
+    font-size: clamp(32px, 5vw, 54px);
+    line-height: 1.12;
+    margin: 15px 0;
+}
+
+.gradient-text {
+    background: linear-gradient(90deg, #67e8f9, #b7a5ff, #f0abfc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero p {
+    color: #c8d1e8;
+    max-width: 650px;
+    margin: 0 auto;
+    line-height: 1.8;
+}
+
+.panel {
+    background: rgba(24, 34, 61, 0.78);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    padding: 23px;
+    border-radius: 19px;
+    margin-bottom: 15px;
+}
+
+.small-label {
+    color: #9aa9c9;
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.metric {
+    color: #67e8f9;
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.step {
+    background: #17213b;
+    border: 1px solid #354467;
+    border-radius: 15px;
+    padding: 18px;
+    min-height: 135px;
+}
+
+.step-number {
+    color: #67e8f9;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.muted {
+    color: #b8c4dc;
+    line-height: 1.65;
+}
+
+div.stButton > button {
+    border-radius: 12px;
+    min-height: 45px;
+    font-weight: 600;
+    border: 1px solid #52638d;
+    transition: 0.2s ease;
+}
+
+div.stButton > button:hover {
+    border-color: #67e8f9;
+    color: #67e8f9;
+}
+
+div.stButton > button[kind="primary"] {
+    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    border: none;
+    color: white;
+}
+
+div[data-testid="stForm"] {
+    background: rgba(24, 34, 61, 0.7);
+    padding: 24px;
+    border-radius: 18px;
+    border: 1px solid #354467;
+}
+
+div[data-testid="stSlider"] {
+    padding-bottom: 8px;
+}
+
+.stProgress > div > div {
+    background: linear-gradient(90deg, #6366f1, #67e8f9);
+}
+
+div[data-testid="stAlert"] {
+    border-radius: 12px;
+}
+
+footer {
+    visibility: hidden;
+}
+
+#MainMenu {
+    visibility: hidden;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# --------------------------------------------------
+# 4. LOAD TRAINED MODEL
+# --------------------------------------------------
+@st.cache_resource
+def load_model():
+    model_path = Path(__file__).parent / "career_model.joblib"
+    if not model_path.exists():
+        raise FileNotFoundError(
+            "career_model.joblib was not found in the project folder."
+        )
+    return joblib.load(model_path)
+
+try:
+    model = load_model()
+except Exception as error:
+    st.error("Unable to load the trained career prediction model.")
+    st.info(
+        "Check that career_model.joblib exists in the same GitHub folder "
+        "as app.py and that requirements.txt contains the required libraries."
+    )
+    st.exception(error)
+    st.stop()
+
+# --------------------------------------------------
+# 5. CAREER INFORMATION
+# --------------------------------------------------
+career_information = {
+    "Data Scientist": {
+        "icon": "📊",
+        "description": "Explore data, discover patterns and build predictive models.",
+        "skills": ["Python", "Maths", "DataAnalysis", "ProblemSolving"]
+    },
+    "Data Analyst": {
+        "icon": "📈",
+        "description": "Turn raw data into useful reports, charts and insights.",
+        "skills": ["DataAnalysis", "Maths", "Communication", "Python"]
+    },
+    "Software Developer": {
+        "icon": "💻",
+        "description": "Build, test and maintain websites, apps and software.",
+        "skills": ["Python", "ProblemSolving", "Maths"]
+    },
+    "Business Analyst": {
+        "icon": "💼",
+        "description": "Understand business needs and support decisions with data.",
+        "skills": ["Business", "Communication", "DataAnalysis"]
+    },
+    "UI UX Designer": {
+        "icon": "🎨",
+        "description": "Design clear, attractive and user-friendly digital experiences.",
+        "skills": ["Design", "Creativity", "Communication"]
+    },
+    "Digital Marketer": {
+        "icon": "📣",
+        "description": "Plan digital campaigns and understand customer engagement.",
+        "skills": ["Communication", "Creativity", "Business"]
+    },
+    "Machine Learning Engineer": {
+        "icon": "🤖",
+        "description": "Develop software that learns patterns from data.",
+        "skills": ["Python", "Maths", "DataAnalysis", "ProblemSolving"]
+    },
+    "Cybersecurity Analyst": {
+        "icon": "🛡️",
+        "description": "Help protect systems, networks and information.",
+        "skills": ["ProblemSolving", "Python", "Maths"]
+    }
+}
+
+# These are simple, manually defined explanations.
+# They are NOT explanations of the model's internal decision process.
+def get_career_info(career):
+    for known_career, info in career_information.items():
+        if known_career.lower() == str(career).lower():
+            return info
+
+    return {
+        "icon": "✨",
+        "description": (
+            "Explore this career by researching its responsibilities, "
+            "required qualifications and practical skills."
+        ),
+        "skills": ["Python", "Communication", "ProblemSolving"]
+    }
+
+
+def get_reasons(career, scores):
+    info = get_career_info(career)
+    relevant_skills = info["skills"]
+
+    ranked_skills = sorted(
+        relevant_skills,
+        key=lambda skill: scores.get(skill, 0),
+        reverse=True
+    )
+
+    reasons = []
+    for skill in ranked_skills[:3]:
+        score = scores.get(skill, 0)
+        if score >= 7:
+            reasons.append(
+                f"Your self-rating in {skill} is strong ({score}/10)."
+            )
+        elif score >= 4:
+            reasons.append(
+                f"You have a developing foundation in {skill} ({score}/10)."
+            )
+
+    if not reasons:
+        reasons.append(
+            "Use this recommendation as a starting point for exploring "
+            "your interests and developing relevant skills."
+        )
+
+    return reasons
+
+
+# --------------------------------------------------
+# 6. HELPER FUNCTIONS
+# --------------------------------------------------
+def go_to(page):
+    st.session_state.page = page
+    st.rerun()
+
+
+def get_model_classes():
+    if hasattr(model, "named_steps"):
+        final_estimator = list(model.named_steps.values())[-1]
+        if hasattr(final_estimator, "classes_"):
+            return final_estimator.classes_
+
+    if hasattr(model, "classes_"):
+        return model.classes_
+
+    return None
+
+
+# --------------------------------------------------
+# 7. SIDEBAR NAVIGATION
+# --------------------------------------------------
+with st.sidebar:
+    st.markdown("## 🧭 Career Compass")
+    st.caption("AI Career Recommendation System")
+    st.divider()
+
+    if st.button("🏠 Home", use_container_width=True):
+        go_to("welcome")
+
+    if st.button("👤 My Profile", use_container_width=True):
+        go_to("profile")
+
+    if st.button("🧠 Skill Assessment", use_container_width=True):
+        go_to("assessment")
+
+    if st.button("✨ My Results", use_container_width=True):
+        if st.session_state.results is None:
+            st.warning("Complete the skill assessment first.")
+        else:
+            go_to("results")
+
+    st.divider()
+    st.caption("Discover possibilities. Build your future.")
+
+# --------------------------------------------------
+# 8. WELCOME PAGE
+# --------------------------------------------------
 if st.session_state.page == "welcome":
 
-    # Premium visual styling
     st.markdown("""
-    <style>
-    .stApp {
-        background:
-            radial-gradient(ellipse at 10% 5%,
-            rgba(91, 75, 210, 0.20), transparent 40%),
-            radial-gradient(ellipse at 90% 30%,
-            rgba(0, 210, 220, 0.10), transparent 35%),
-            #080d1b;
-        color: #f4f7ff;
-    }
-
-    .block-container {
-        max-width: 1150px;
-        padding-top: 2rem;
-    }
-
-    .brand {
-        color: #b8c4ff;
-        font-size: 15px;
-        font-weight: 700;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-    }
-
-    .hero-title {
-        color: #ffffff;
-        font-size: clamp(38px, 5vw, 66px);
-        line-height: 1.08;
-        font-weight: 850;
-        letter-spacing: -2px;
-        margin-top: 20px;
-        margin-bottom: 18px;
-    }
-
-    .gradient-text {
-        background: linear-gradient(90deg, #a5b4fc, #67e8f9);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-
-    .hero-description {
-        color: #b7c1d8;
-        font-size: 17px;
-        line-height: 1.8;
-        max-width: 680px;
-    }
-
-    .eyebrow {
-        display: inline-block;
-        color: #c4b5fd;
-        border: 1px solid rgba(167,139,250,0.4);
-        background: rgba(139,92,246,0.12);
-        border-radius: 50px;
-        padding: 8px 14px;
-        font-size: 12px;
-        letter-spacing: 1px;
-    }
-
-    .orbit-card {
-        background: linear-gradient(145deg,
-            rgba(30,41,80,0.95),
-            rgba(15,23,42,0.95));
-        border: 1px solid rgba(148,163,184,0.25);
-        border-radius: 26px;
-        padding: 28px;
-        text-align: center;
-        box-shadow: 0 15px 50px rgba(0,0,0,0.25);
-    }
-
-    .orbit {
-        width: 185px;
-        height: 185px;
-        margin: 12px auto 25px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 65px;
-        background:
-            radial-gradient(circle,
-            #263b78 0%,
-            #151c42 55%,
-            #101629 72%);
-        border: 1px solid #7184ff;
-        box-shadow:
-            0 0 25px rgba(99,102,241,0.4),
-            inset 0 0 25px rgba(103,232,249,0.12);
-        animation: float 4s ease-in-out infinite;
-    }
-
-    @keyframes float {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-8px); }
-    }
-
-    .orbit-heading {
-        color: white;
-        font-size: 22px;
-        font-weight: 750;
-    }
-
-    .muted {
-        color: #a9b5cf;
-        font-size: 14px;
-        line-height: 1.7;
-    }
-
-    .section-heading {
-        color: white;
-        font-size: 27px;
-        font-weight: 750;
-        margin-bottom: 5px;
-    }
-
-    .career-card {
-        min-height: 195px;
-        padding: 23px 20px;
-        border-radius: 19px;
-        border: 1px solid rgba(148,163,184,0.23);
-        background: linear-gradient(145deg,
-            rgba(26,36,66,0.95),
-            rgba(13,20,38,0.98));
-        transition: transform 0.2s, border-color 0.2s;
-    }
-
-    .career-card:hover {
-        transform: translateY(-5px);
-        border-color: #818cf8;
-    }
-
-    .career-icon {
-        font-size: 31px;
-        margin-bottom: 12px;
-    }
-
-    .career-title {
-        color: #f5f7ff;
-        font-size: 17px;
-        font-weight: 750;
-        margin-bottom: 8px;
-    }
-
-    .career-desc {
-        color: #a9b5cf;
-        font-size: 13px;
-        line-height: 1.7;
-    }
-
-    .step-card {
-        background: rgba(24,34,61,0.8);
-        border: 1px solid rgba(148,163,184,0.2);
-        padding: 19px;
-        border-radius: 16px;
-        min-height: 135px;
-    }
-
-    .step-number {
-        color: #67e8f9;
-        font-size: 12px;
-        letter-spacing: 2px;
-        font-weight: 800;
-    }
-
-    .step-title {
-        color: white;
-        font-size: 16px;
-        font-weight: 750;
-        margin-top: 8px;
-    }
-
-    .step-desc {
-        color: #a9b5cf;
-        font-size: 13px;
-        line-height: 1.6;
-        margin-top: 7px;
-    }
-
-    /* Improve contrast of common Streamlit elements */
-    [data-testid="stMarkdownContainer"] p {
-        line-height: 1.7;
-    }
-
-    div.stButton > button {
-        border-radius: 11px;
-        min-height: 46px;
-        font-weight: 700;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # TOP BRAND BAR
-    brand_left, brand_right = st.columns([2, 1])
-
-    with brand_left:
-        st.markdown(
-            '<div class="brand">✦ CAREER COMPASS</div>',
-            unsafe_allow_html=True
-        )
-
-    with brand_right:
-        st.markdown(
-            '<div style="text-align:right;color:#a9b5cf;'
-            'font-size:12px;padding-top:5px;">'
-            'DISCOVER · EXPLORE · GROW</div>',
-            unsafe_allow_html=True
-        )
-
-    st.write("")
-    st.write("")
-
-    # HERO SECTION
-    hero_left, hero_right = st.columns([1.35, 1], gap="large")
-
-    with hero_left:
-
-        st.markdown(
-            '<div class="eyebrow">✦ YOUR PERSONAL CAREER EXPLORER</div>',
-            unsafe_allow_html=True
-        )
-
-        st.markdown(
-            '<div class="hero-title">'
-            'Your future.<br>'
-            'Your strengths.<br>'
-            '<span class="gradient-text">Your direction.</span>'
-            '</div>',
-            unsafe_allow_html=True
-        )
-
-        st.markdown(
-            '<div class="hero-description">'
-            'Discover career possibilities that connect with your '
-            'skills and interests. Take a simple assessment and explore '
-            'new directions for your future.'
-            '</div>',
-            unsafe_allow_html=True
-        )
-
-        st.write("")
-        st.write("")
-
-        if st.button(
-            "✦  Discover My Career Path  →",
-            type="primary",
-            use_container_width=True
-        ):
-            st.session_state.page = "profile"
-            st.rerun()
-
-        st.caption(
-            "A few simple steps to explore your possibilities."
-        )
-
-    with hero_right:
-
-        st.markdown("""
-        <div class="orbit-card">
-            <div style="color:#a5b4fc;font-size:12px;
-                        letter-spacing:3px;font-weight:700;">
-                YOUR NEXT CHAPTER
-            </div>
-            <div class="orbit">🧭</div>
-            <div class="orbit-heading">Find Your Direction</div>
-            <p class="muted">
-                Understand your strengths.<br>
-                Explore different career possibilities.<br>
-                Take your next step with confidence.
-            </p>
-            <div style="color:#67e8f9;font-size:12px;
-                        letter-spacing:2px;">
-                YOUR JOURNEY STARTS HERE ✦
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.write("")
-    st.write("")
-
-    # QUICK HIGHLIGHT STRIP
-    st.markdown("""
-    <div style="
-        display:flex;
-        flex-wrap:wrap;
-        gap:12px;
-        justify-content:space-between;
-        background:rgba(30,41,80,0.48);
-        border:1px solid rgba(148,163,184,0.18);
-        border-radius:16px;
-        padding:20px;
-    ">
-        <div>🧠 <b>Skill-based exploration</b></div>
-        <div>🎯 <b>Personalized experience</b></div>
-        <div>💡 <b>Career explanations</b></div>
-        <div>📥 <b>Downloadable report</b></div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.write("")
-    st.write("")
-
-    # INTERACTIVE CAREER EXPLORER
-    st.markdown(
-        '<div class="section-heading">Explore Your Possibilities</div>'
-        '<div class="muted">Choose an area that catches your interest.</div>',
-        unsafe_allow_html=True
-    )
-
-    st.write("")
-
-    career_cards = [
-        (
-            "📊",
-            "Data & Analytics",
-            "Explore insights, patterns, reporting, and data-driven decisions.",
-            "Data Analyst"
-        ),
-        (
-            "🤖",
-            "AI & Intelligence",
-            "Explore machine learning, intelligent systems, and automation.",
-            "Data Scientist"
-        ),
-        (
-            "💻",
-            "Software & Development",
-            "Explore programming, application development, and problem-solving.",
-            "Software Developer"
-        ),
-        (
-            "📈",
-            "Business & Strategy",
-            "Explore business problems, communication, and analysis.",
-            "Business Analyst"
-        ),
-        (
-            "🎨",
-            "Design & Creativity",
-            "Explore visual thinking and user-friendly digital experiences.",
-            "UI UX Designer"
-        ),
-        (
-            "🚀",
-            "Digital & Innovation",
-            "Explore creativity, communication, and digital opportunities.",
-            "Digital Marketer"
-        )
-    ]
-
-    columns = st.columns(3)
-
-    for i, (emoji, title, description, career) in enumerate(career_cards):
-
-        with columns[i % 3]:
-
-            st.markdown(
-                f"""
-                <div class="career-card">
-                    <div class="career-icon">{emoji}</div>
-                    <div class="career-title">{title}</div>
-                    <div class="career-desc">{description}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-            if st.button(
-                f"Explore {title} →",
-                key=f"compass_career_{i}",
-                use_container_width=True
-            ):
-                st.session_state.selected_career = career
-
-    # Display selected career
-    selected = st.session_state.get("selected_career")
-
-    if selected:
-
-        st.write("")
-
-        st.markdown(
-            f'<div class="section-heading">'
-            f'Your selected interest: {selected}</div>',
-            unsafe_allow_html=True
-        )
-
-        st.write(
-            "Great choice! Complete the assessment to explore the "
-            "model's career recommendations based on your skill ratings."
-        )
-
-        if st.button(
-            "Continue with My Assessment →",
-            type="primary",
-            use_container_width=True
-        ):
-            st.session_state.page = "profile"
-            st.rerun()
-
-    st.write("")
-    st.write("")
-
-    # INTERACTIVE SKILL PREVIEW
-    st.markdown(
-        '<div class="section-heading">A Little Preview of You</div>'
-        '<div class="muted">'
-        'Try rating a skill and see how the assessment scale works.'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
-    st.write("")
-
-    preview_left, preview_right = st.columns([1, 1], gap="large")
-
-    with preview_left:
-
-        preview_skill = st.selectbox(
-            "Choose a skill to preview",
-            [
-                "Python",
-                "Mathematics",
-                "Communication",
-                "Creativity",
-                "Business Interest",
-                "Design Interest",
-                "Problem Solving",
-                "Data Analysis"
-            ],
-            key="compass_preview_skill"
-        )
-
-        preview_rating = st.slider(
-            "Adjust your self-rating",
-            min_value=1,
-            max_value=5,
-            value=3,
-            key="compass_preview_rating"
-        )
-
-    with preview_right:
-
-        st.markdown(
-            '<div class="step-card">'
-            '<div class="step-number">YOUR SKILL SNAPSHOT</div>',
-            unsafe_allow_html=True
-        )
-
-        st.markdown(
-            f'<div class="hero-title" style="font-size:42px;'
-            f'margin-top:8px;">{preview_rating}<span '
-            f'class="gradient-text">/5</span></div>',
-            unsafe_allow_html=True
-        )
-
-        preview_messages = {
-            1: "A starting point — you can develop this skill further.",
-            2: "Building your foundation through practice.",
-            3: "A developing skill with room to grow.",
-            4: "A strength you rate highly.",
-            5: "One of your strongest self-rated skills."
-        }
-
-        st.write(f"**{preview_skill}**")
-        st.write(preview_messages[preview_rating])
-        st.progress(preview_rating / 5)
-
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    st.caption(
-        "This preview is for exploration only. It does not affect "
-        "your actual model prediction."
-    )
-
-    st.write("")
-    st.write("")
-
-    # HOW IT WORKS
-    st.markdown(
-        '<div class="section-heading">Your Journey in 3 Steps</div>'
-        '<div class="muted">Simple to begin. Easy to explore.</div>',
-        unsafe_allow_html=True
-    )
-
-    st.write("")
-
-    step_columns = st.columns(3)
-
-    steps = [
-        (
-            "01",
-            "Create Your Profile",
-            "Enter your name and choose your current profession."
-        ),
-        (
-            "02",
-            "Discover Your Skills",
-            "Rate eight skills based on your own assessment."
-        ),
-        (
-            "03",
-            "Explore Your Results",
-            "Review the top three predictions and their explanations."
-        )
-    ]
-
-    for col, (number, title, description) in zip(step_columns, steps):
-
-        with col:
-            st.markdown(
-                f"""
-                <div class="step-card">
-                    <div class="step-number">STEP {number}</div>
-                    <div class="step-title">{title}</div>
-                    <div class="step-desc">{description}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-    st.write("")
-    st.write("")
-
-    # FINAL CALL TO ACTION
-    st.markdown("""
-    <div style="
-        background:linear-gradient(120deg,#312e81,#4338ca,#164e63);
-        border:1px solid rgba(165,180,252,0.35);
-        border-radius:22px;
-        padding:30px 20px;
-        text-align:center;
-    ">
-        <div style="font-size:35px;">✨</div>
-        <h2 style="color:white;">Ready to Explore What's Possible?</h2>
-        <p style="color:#dbeafe;">
-            Your next career idea could begin with one small step.
+    <div class="hero">
+        <div class="hero-icon">🧭</div>
+        <div class="eyebrow">Your future, your direction</div>
+        <h1>Find Your <span class="gradient-text">Career Compass</span></h1>
+        <p>
+            Discover career possibilities that connect with your skills,
+            interests and strengths. Take a short assessment and explore
+            where your next chapter could begin.
         </p>
     </div>
     """, unsafe_allow_html=True)
 
-    st.write("")
-
-    if st.button(
-        "Start My Journey  ✦",
-        type="primary",
-        use_container_width=True
-    ):
-        st.session_state.page = "profile"
-        st.rerun()
-
-    st.write("")
-    st.divider()
-
+    st.markdown("### ✨ A smarter way to explore your future")
     st.markdown(
-        '<div style="text-align:center;color:#94a3b8;'
-        'font-size:12px;">'
-        'CAREER COMPASS · AI CAREER RECOMMENDATION SYSTEM<br>'
-        'Built with Python · Scikit-learn · Streamlit'
-        '</div>',
+        '<p class="muted">Your career journey does not need to start with '
+        'guesswork. Start by understanding your current strengths.</p>',
         unsafe_allow_html=True
     )
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.markdown("""
+        <div class="panel">
+            <div style="font-size:32px;">🧠</div>
+            <h3>Know Your Skills</h3>
+            <p class="muted">
+                Rate your abilities in programming, communication,
+                creativity, business and more.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+        <div class="panel">
+            <div style="font-size:32px;">🎯</div>
+            <h3>Explore Careers</h3>
+            <p class="muted">
+                Get career suggestions from your trained machine-learning
+                model and explore relevant skills.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col3:
+        st.markdown("""
+        <div class="panel">
+            <div style="font-size:32px;">🚀</div>
+            <h3>Plan Your Next Step</h3>
+            <p class="muted">
+                Use your results to decide which skills to practise
+                and which careers to research.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("### 🌟 Career worlds to explore")
+
+    career_cols = st.columns(4)
+    featured_careers = [
+        ("📊", "Data & Analytics"),
+        ("💻", "Software & Tech"),
+        ("🎨", "Design & Creativity"),
+        ("💼", "Business & Strategy")
+    ]
+
+    for col, item in zip(career_cols, featured_careers):
+        with col:
+            st.markdown(f"""
+            <div class="step">
+                <div style="font-size:30px;">{item[0]}</div>
+                <h4>{item[1]}</h4>
+                <p class="muted">Discover related opportunities.</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+    st.markdown("### 🗺️ Your journey in 3 steps")
+
+    step1, step2, step3 = st.columns(3)
+
+    with step1:
+        st.markdown("""
+        <div class="step">
+            <div class="step-number">STEP 01</div>
+            <h4>Introduce Yourself</h4>
+            <p class="muted">Tell us a little about your current role.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with step2:
+        st.markdown("""
+        <div class="step">
+            <div class="step-number">STEP 02</div>
+            <h4>Rate Your Skills</h4>
+            <p class="muted">Answer a few quick self-assessment questions.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with step3:
+        st.markdown("""
+        <div class="step">
+            <div class="step-number">STEP 03</div>
+            <h4>Explore Your Results</h4>
+            <p class="muted">Review suggested careers and skill areas.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.write("")
+
+    left, center, right = st.columns([1, 2, 1])
+    with center:
+        if st.button(
+            "🚀  START MY CAREER JOURNEY",
+            type="primary",
+            use_container_width=True
+        ):
+            go_to("profile")
+
+    st.caption(
+        "Note: This is an educational career-exploration tool, "
+        "not a guarantee of career success or job placement."
+    )
+
+# --------------------------------------------------
+# 9. PROFILE PAGE
+# --------------------------------------------------
+elif st.session_state.page == "profile":
+
+    st.markdown("## 👤 Let's get to know you")
+    st.markdown(
+        '<p class="muted">A few details will help personalise your '
+        'career exploration experience.</p>',
+        unsafe_allow_html=True
+    )
+
+    with st.form("profile_form"):
+        name = st.text_input(
+            "What should we call you?",
+            value=st.session_state.name,
+            placeholder="Enter your name"
+        )
+
+        profession_options = [
+            "Student",
+            "Working Professional",
+            "Job Seeker",
+            "Entrepreneur",
+            "Other"
+        ]
+
+        current_profession = st.session_state.profession
+        if current_profession not in profession_options:
+            current_profession = "Other"
+
+        profession = st.selectbox(
+            "Which best describes you?",
+            profession_options,
+            index=profession_options.index(current_profession)
+        )
+
+        other_role = ""
+        if profession == "Other":
+            other_role = st.text_input(
+                "Please specify your role",
+                value=st.session_state.other_role,
+                placeholder="Enter your role"
+            )
+
+        submitted = st.form_submit_button(
+            "Continue to Skill Assessment →",
+            type="primary",
+            use_container_width=True
+        )
+
+        if submitted:
+            if not name.strip():
+                st.error("Please enter your name.")
+            elif profession == "Other" and not other_role.strip():
+                st.error("Please specify your role.")
+            else:
+                st.session_state.name = name.strip()
+                st.session_state.profession = profession
+                st.session_state.other_role = other_role.strip()
+                go_to("assessment")
+
+    if st.button("← Back to Home"):
+        go_to("welcome")
+
+# --------------------------------------------------
+# 10. SKILL ASSESSMENT PAGE
+# --------------------------------------------------
+elif st.session_state.page == "assessment":
+
+    display_name = st.session_state.name or "Explorer"
+
+    st.markdown(f"## 🧠 {display_name}, let's map your strengths")
+    st.markdown(
+        '<p class="muted">Rate each skill from 0 to 10 based on your '
+        'current self-assessment. There are no right or wrong answers.</p>',
+        unsafe_allow_html=True
+    )
+
+    # IMPORTANT:
+    # These feature names must match the columns used to train your model.
+    skill_names = [
+        "Python",
+        "Maths",
+        "Communication",
+        "Creativity",
+        "Business",
+        "Design",
+        "ProblemSolving",
+        "DataAnalysis"
+    ]
+
+    skill_labels = {
+        "Python": "💻 Python Programming",
+        "Maths": "🔢 Mathematics",
+        "Communication": "💬 Communication",
+        "Creativity": "🎨 Creativity",
+        "Business": "💼 Business Interest",
+        "Design": "🖌️ Design Interest",
+        "ProblemSolving": "🧩 Problem Solving",
+        "DataAnalysis": "📊 Data Analysis"
+    }
+
+    with st.form("skills_form"):
+        st.markdown("### Rate your current skills")
+
+        col1, col2 = st.columns(2)
+        scores = {}
+
+        for index, skill in enumerate(skill_names):
+            target_col = col1 if index % 2 == 0 else col2
+
+            with target_col:
+                scores[skill] = st.slider(
+                    skill_labels[skill],
+                    min_value=0,
+                    max_value=10,
+                    value=5,
+                    key=f"skill_{skill}",
+                    help="0 = Beginner, 10 = Very confident"
+                )
+
+        submitted = st.form_submit_button(
+            "✨ Generate My Career Recommendations",
+            type="primary",
+            use_container_width=True
+        )
+
+        if submitted:
+            try:
+                # Keep the same feature order used by the training dataset.
+                feature_names = skill_names
+
+                if hasattr(model, "feature_names_in_"):
+                    feature_names = list(model.feature_names_in_)
+                elif hasattr(model, "named_steps"):
+                    final_estimator = list(model.named_steps.values())[-1]
+                    if hasattr(final_estimator, "feature_names_in_"):
+                        feature_names = list(final_estimator.feature_names_in_)
+
+                missing_features = [
+                    feature for feature in feature_names
+                    if feature not in scores
+                ]
+
+                if missing_features:
+                    st.error(
+                        "The model expects different input columns: "
+                        + ", ".join(missing_features)
+                    )
+                    st.info(
+                        "Update skill_names to match the exact columns "
+                        "used when training career_model.joblib."
+                    )
+                else:
+                    input_data = pd.DataFrame([{
+                        feature: scores[feature]
+                        for feature in feature_names
+                    }])
+
+                    predicted = model.predict(input_data)[0]
+
+                    if hasattr(model, "predict_proba"):
+                        probabilities = model.predict_proba(input_data)[0]
+                        classes = get_model_classes()
+
+                        if classes is not None:
+                            ranked_indices = np.argsort(probabilities)[::-1]
+                            recommendations = [
+                                {
+                                    "career": str(classes[index]),
+                                    "score": float(probabilities[index]) * 100
+                                }
+                                for index in ranked_indices[:3]
+                            ]
+                        else:
+                            recommendations = [{
+                                "career": str(predicted),
+                                "score": 100.0
+                            }]
+                    else:
+                        recommendations = [{
+                            "career": str(predicted),
+                            "score": 100.0
+                        }]
+
+                    st.session_state.skill_scores = scores
+                    st.session_state.results = recommendations
+                    go_to("results")
+
+            except Exception as error:
+                st.error("Unable to generate recommendations.")
+                st.exception(error)
+
+    if st.button("← Back to Profile"):
+        go_to("profile")
+
+# --------------------------------------------------
+# 11. RESULTS PAGE
+# --------------------------------------------------
+elif st.session_state.page == "results":
+
+    recommendations = st.session_state.results
+    scores = st.session_state.skill_scores
+
+    if not recommendations or not scores:
+        st.warning("Please complete the skill assessment first.")
+        if st.button("Start Assessment"):
+            go_to("assessment")
+        st.stop()
+
+    name = st.session_state.name or "Explorer"
+
+    st.markdown(f"## ✨ Your Career Compass, {name}")
+    st.markdown(
+        '<p class="muted">Here are the career categories suggested by '
+        'your model. Use them as starting points for further research.</p>',
+        unsafe_allow_html=True
+    )
+
+    best = recommendations[0]
+    best_info = get_career_info(best["career"])
+
+    st.markdown(f"""
+    <div class="hero">
+        <div class="hero-icon">{best_info["icon"]}</div>
+        <div class="eyebrow">Your top model recommendation</div>
+        <h1><span class="gradient-text">{best["career"]}</span></h1>
+        <p>{best_info["description"]}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("### 🏆 Your top recommendations")
+
+    for index, recommendation in enumerate(recommendations, start=1):
+        career = recommendation["career"]
+        info = get_career_info(career)
+        score = recommendation["score"]
+
+        st.markdown(f"""
+        <div class="panel">
+            <div class="small-label">RECOMMENDATION {index}</div>
+            <h3>{info["icon"]} {career}</h3>
+            <p class="muted">{info["description"]}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.progress(
+            max(0.0, min(float(score) / 100.0, 1.0)),
+            text=f"Model score: {score:.1f}%"
+        )
+
+        st.markdown("**Why explore this career?**")
+        for reason in get_reasons(career, scores):
+            st.markdown(f"- {reason}")
+
+        with st.expander(f"Skills to explore for {career}"):
+            for skill in info["skills"]:
+                st.write(
+                    f"• {skill}: your self-rating is "
+                    f"{scores.get(skill, 0)}/10"
+                )
+
+    st.divider()
+    st.markdown("### 📊 Your skill snapshot")
+
+    chart_data = pd.DataFrame({
+        "Skill": list(scores.keys()),
+        "Self-rating": list(scores.values())
+    }).set_index("Skill")
+
+    st.bar_chart(chart_data, y="Self-rating")
+
+    st.info(
+        "Important: Model scores represent the model's relative output "
+        "for the supplied input, not the probability that you will succeed "
+        "in a career. The explanations above use manually selected skill "
+        "associations and are not model feature-attribution results."
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button(
+            "🔄 Retake Assessment",
+            use_container_width=True
+        ):
+            st.session_state.results = None
+            st.session_state.skill_scores = None
+            go_to("assessment")
+
+    with col2:
+        if st.button(
+            "🏠 Back to Home",
+            use_container_width=True
+        ):
+            go_to("welcome")
+
+# --------------------------------------------------
+# 12. FOOTER
+# --------------------------------------------------
+st.markdown("---")
+st.markdown(
+    "<p style='text-align:center;color:#9aa9c9;'>"
+    "CAREER COMPASS · AI CAREER RECOMMENDATION SYSTEM<br>"
+    "Built for career exploration and educational purposes"
+    "</p>",
+    unsafe_allow_html=True
+)
