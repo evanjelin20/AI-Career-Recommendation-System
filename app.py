@@ -8,13 +8,14 @@ import pandas as pd
 import streamlit as st
 
 
-# ==================================================
+# =====================================================
 # PAGE CONFIGURATION
-# ==================================================
+# =====================================================
 st.set_page_config(
-    page_title="AI Career Recommendation System",
+    page_title="CareerPath | AI Career Recommendation",
     page_icon="🎯",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 MODEL_PATH = "career_model.joblib"
@@ -30,92 +31,218 @@ FEATURES = [
     "DataAnalysis"
 ]
 
-
-# ==================================================
-# CAREER INFORMATION
-# ==================================================
-CAREER_DETAILS = {
+CAREERS = {
     "Data Scientist": {
         "icon": "📊",
-        "description": "Analyze data and build predictive models.",
+        "description": "Discover insights from data and develop predictive models.",
         "skills": ["Python", "Statistics", "SQL", "Machine Learning"],
-        "develop": ["Learn pandas and NumPy", "Practice SQL", "Build ML projects"]
+        "improve": ["Learn pandas and NumPy", "Practice SQL", "Build data projects"]
     },
     "Software Developer": {
         "icon": "💻",
-        "description": "Develop and maintain software applications.",
-        "skills": ["Python", "Java", "Problem Solving", "Git"],
-        "develop": ["Practice coding", "Learn data structures", "Build applications"]
+        "description": "Build, test, and maintain useful software applications.",
+        "skills": ["Programming", "Problem Solving", "Java", "Git"],
+        "improve": ["Practice coding", "Learn data structures", "Build applications"]
     },
     "Business Analyst": {
         "icon": "📈",
-        "description": "Analyze business needs and support decisions.",
+        "description": "Turn business requirements and data into actionable decisions.",
         "skills": ["Communication", "Excel", "SQL", "Critical Thinking"],
-        "develop": ["Learn Excel", "Practice SQL", "Study business requirements"]
+        "improve": ["Improve Excel skills", "Practice SQL", "Learn business analysis"]
     },
     "UI UX Designer": {
         "icon": "🎨",
-        "description": "Design useful, accessible digital experiences.",
+        "description": "Create intuitive, accessible, and engaging user experiences.",
         "skills": ["Creativity", "Design", "Communication", "Figma"],
-        "develop": ["Learn Figma", "Create wireframes", "Build a portfolio"]
+        "improve": ["Learn Figma", "Create wireframes", "Build a portfolio"]
     },
     "Digital Marketer": {
         "icon": "📱",
-        "description": "Promote products through digital channels.",
+        "description": "Help businesses reach audiences through digital channels.",
         "skills": ["Communication", "Creativity", "SEO", "Analytics"],
-        "develop": ["Learn SEO", "Practice content planning", "Study campaign analytics"]
+        "improve": ["Learn SEO", "Plan content", "Study marketing analytics"]
     }
 }
 
 
-# ==================================================
-# CUSTOM STYLING
-# ==================================================
+# =====================================================
+# SESSION STATE
+# =====================================================
+defaults = {
+    "page": "Welcome",
+    "profile": {},
+    "ratings": {feature: 5 for feature in FEATURES},
+    "results": [],
+    "method": "",
+    "assessment_done": False
+}
+
+for key, value in defaults.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
+
+
+def go_to(page):
+    st.session_state.page = page
+    st.rerun()
+
+
+# =====================================================
+# PROFESSIONAL DESIGN
+# =====================================================
 st.markdown("""
 <style>
-.stApp {
-    background-color: #f5f7fb;
-}
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-.main-title {
-    text-align: center;
-    font-size: 36px;
-    font-weight: 800;
-    color: #243b64;
-}
+    html, body, [class*="css"] {
+        font-family: 'Inter', sans-serif;
+    }
 
-.subtitle {
-    text-align: center;
-    color: #64748b;
-    margin-bottom: 25px;
-}
+    .stApp {
+        background: #F5F7FC;
+    }
 
-.career-card {
-    background-color: white;
-    padding: 20px;
-    border-radius: 14px;
-    border: 1px solid #dce3ef;
-    margin: 10px 0;
-}
+    [data-testid="stSidebar"] {
+        background: #101C36;
+    }
 
-.career-title {
-    font-size: 23px;
-    font-weight: bold;
-    color: #243b64;
-}
+    [data-testid="stSidebar"] * {
+        color: #FFFFFF;
+    }
 
-.career-score {
-    font-size: 18px;
-    color: #2563eb;
-    font-weight: bold;
-}
+    .brand {
+        font-size: 27px;
+        font-weight: 800;
+        color: #FFFFFF;
+        letter-spacing: -1px;
+    }
+
+    .brand span {
+        color: #78A7FF;
+    }
+
+    .hero {
+        background: linear-gradient(125deg, #122447 0%, #234C89 60%, #3977C8 100%);
+        padding: 54px 42px;
+        border-radius: 24px;
+        color: white;
+        margin-top: 12px;
+        margin-bottom: 24px;
+        border: 1px solid rgba(255,255,255,0.12);
+    }
+
+    .hero-tag {
+        display: inline-block;
+        padding: 8px 14px;
+        border-radius: 30px;
+        background: rgba(255,255,255,0.13);
+        color: #E4EDFF;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 22px;
+    }
+
+    .hero h1 {
+        color: white;
+        font-size: clamp(34px, 5vw, 54px);
+        line-height: 1.15;
+        letter-spacing: -2px;
+        margin: 0 0 20px 0;
+    }
+
+    .hero p {
+        color: #E1EAFB;
+        font-size: 16px;
+        line-height: 1.9;
+        max-width: 650px;
+    }
+
+    .section-title {
+        color: #172B4D;
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.8px;
+    }
+
+    .section-subtitle {
+        color: #64748B;
+        font-size: 15px;
+        line-height: 1.7;
+    }
+
+    .feature-card {
+        background: white;
+        border: 1px solid #E4EAF3;
+        padding: 24px;
+        border-radius: 18px;
+        min-height: 175px;
+        margin-bottom: 12px;
+    }
+
+    .feature-card h3 {
+        color: #1E3763;
+        font-size: 18px;
+        margin-top: 12px;
+    }
+
+    .feature-card p {
+        color: #64748B;
+        line-height: 1.7;
+        font-size: 14px;
+    }
+
+    .step-label {
+        color: #356AC3;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 1.5px;
+    }
+
+    .career-card {
+        background: white;
+        border: 1px solid #E0E8F4;
+        border-radius: 18px;
+        padding: 24px;
+        margin: 10px 0 18px 0;
+    }
+
+    .career-card h3 {
+        color: #19345E;
+        font-size: 22px;
+    }
+
+    .muted {
+        color: #64748B;
+        line-height: 1.7;
+    }
+
+    div.stButton > button,
+    div.stDownloadButton > button {
+        border-radius: 10px;
+        font-weight: 600;
+        min-height: 44px;
+    }
+
+    div[data-testid="stMetric"] {
+        background: white;
+        border: 1px solid #E4EAF3;
+        padding: 18px;
+        border-radius: 14px;
+    }
+
+    .footer {
+        text-align: center;
+        color: #8290A5;
+        font-size: 12px;
+        padding: 24px 0 10px 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 
-# ==================================================
-# LOAD TRAINED MODEL
-# ==================================================
+# =====================================================
+# MODEL LOADING
+# =====================================================
 @st.cache_resource
 def load_model():
     if not os.path.exists(MODEL_PATH):
@@ -130,367 +257,609 @@ def load_model():
 model = load_model()
 
 
-# ==================================================
-# FALLBACK CAREER SCORING
-# Used if no trained model is available.
-# These are heuristic scores, not ML predictions.
-# ==================================================
-def calculate_scores(student):
+# =====================================================
+# CAREER SCORING
+# =====================================================
+def fallback_recommendations(ratings):
+    """Transparent skill-based scoring, not trained ML."""
 
-    p = student["Python"]
-    m = student["Maths"]
-    c = student["Communication"]
-    cr = student["Creativity"]
-    b = student["Business"]
-    d = student["Design"]
-    ps = student["ProblemSolving"]
-    da = student["DataAnalysis"]
+    p = ratings["Python"]
+    m = ratings["Maths"]
+    c = ratings["Communication"]
+    cr = ratings["Creativity"]
+    b = ratings["Business"]
+    d = ratings["Design"]
+    ps = ratings["ProblemSolving"]
+    da = ratings["DataAnalysis"]
 
     scores = {
         "Data Scientist":
-            0.25 * p + 0.25 * m + 0.20 * da
-            + 0.20 * ps + 0.10 * cr,
+            0.25*p + 0.25*m + 0.20*da + 0.20*ps + 0.10*cr,
 
         "Software Developer":
-            0.35 * p + 0.30 * ps + 0.15 * m
-            + 0.10 * cr + 0.10 * da,
+            0.35*p + 0.30*ps + 0.15*m + 0.10*cr + 0.10*da,
 
         "Business Analyst":
-            0.25 * c + 0.25 * b + 0.20 * da
-            + 0.15 * m + 0.15 * ps,
+            0.25*c + 0.25*b + 0.20*da + 0.15*m + 0.15*ps,
 
         "UI UX Designer":
-            0.35 * d + 0.25 * cr + 0.20 * c
-            + 0.10 * ps + 0.10 * b,
+            0.35*d + 0.25*cr + 0.20*c + 0.10*ps + 0.10*b,
 
         "Digital Marketer":
-            0.30 * c + 0.25 * cr + 0.25 * b
-            + 0.10 * da + 0.10 * d
+            0.30*c + 0.25*cr + 0.25*b + 0.10*da + 0.10*d
     }
 
     total = sum(scores.values())
 
-    if total <= 0:
+    if total == 0:
         return [
             {"career": career, "score": 20.0}
-            for career in CAREER_DETAILS
+            for career in CAREERS
         ]
 
-    results = []
-
-    for career, score in scores.items():
-        results.append({
+    results = [
+        {
             "career": career,
             "score": round(score / total * 100, 2)
-        })
+        }
+        for career, score in scores.items()
+    ]
 
-    return sorted(
-        results,
-        key=lambda item: item["score"],
-        reverse=True
-    )
+    return sorted(results, key=lambda x: x["score"], reverse=True)
 
 
-# ==================================================
-# CAREER RECOMMENDATION FUNCTION
-# ==================================================
-def recommend_careers(student):
-
+def recommend_careers(ratings):
     if model is None:
-        return calculate_scores(student), "Skill-based scoring"
+        return fallback_recommendations(ratings), "Skill-based scoring"
 
     input_df = pd.DataFrame(
-        [[student[f] for f in FEATURES]],
+        [[ratings[f] for f in FEATURES]],
         columns=FEATURES
     )
 
     try:
-        # Use the feature format expected by the trained model.
         if hasattr(model, "predict_proba"):
             probabilities = model.predict_proba(input_df)[0]
-            classes = model.classes_
 
             results = [
                 {
                     "career": str(career),
                     "score": round(float(probability) * 100, 2)
                 }
-                for career, probability in zip(classes, probabilities)
+                for career, probability in zip(
+                    model.classes_, probabilities
+                )
             ]
 
             if results:
                 return sorted(
-                    results,
-                    key=lambda item: item["score"],
-                    reverse=True
+                    results, key=lambda x: x["score"], reverse=True
                 ), "Trained ML model"
 
-        # Support models that only implement predict().
         prediction = model.predict(input_df)[0]
 
-        return [{
-            "career": str(prediction),
-            "score": 100.0
-        }], "Trained ML model"
+        return [
+            {"career": str(prediction), "score": 100.0}
+        ], "Trained ML model"
 
     except Exception:
-        try:
-            # Retry with a NumPy array for models requiring array input.
-            input_array = np.array(
-                [[student[f] for f in FEATURES]],
-                dtype=float
-            )
-
-            if hasattr(model, "predict_proba"):
-                probabilities = model.predict_proba(input_array)[0]
-
-                results = [
-                    {
-                        "career": str(career),
-                        "score": round(float(probability) * 100, 2)
-                    }
-                    for career, probability in zip(
-                        model.classes_, probabilities
-                    )
-                ]
-
-                if results:
-                    return sorted(
-                        results,
-                        key=lambda item: item["score"],
-                        reverse=True
-                    ), "Trained ML model"
-
-            prediction = model.predict(input_array)[0]
-
-            return [{
-                "career": str(prediction),
-                "score": 100.0
-            }], "Trained ML model"
-
-        except Exception:
-            return calculate_scores(student), "Skill-based scoring"
+        # Use a clear fallback instead of crashing the website.
+        return fallback_recommendations(ratings), "Skill-based scoring"
 
 
-# ==================================================
-# SIDEBAR
-# ==================================================
+# =====================================================
+# SIDEBAR NAVIGATION
+# =====================================================
 with st.sidebar:
+    st.markdown(
+        '<div class="brand">Career<span>Path.</span></div>',
+        unsafe_allow_html=True
+    )
 
-    st.title("🎯 Career Navigator")
-    st.write("Explore careers based on your skills.")
+    st.caption("AI-POWERED CAREER EXPLORATION")
+    st.divider()
+
+    st.markdown("### Navigation")
+
+    pages = ["Welcome", "Profile", "Assessment", "Results"]
+
+    for page_name in pages:
+        icon = {
+            "Welcome": "🏠",
+            "Profile": "👤",
+            "Assessment": "📝",
+            "Results": "📊"
+        }[page_name]
+
+        if st.button(
+            f"{icon}  {page_name}",
+            key=f"nav_{page_name}",
+            use_container_width=True,
+            type="primary" if st.session_state.page == page_name else "secondary"
+        ):
+            go_to(page_name)
 
     st.divider()
 
-    student_name = st.text_input(
-        "Student name",
-        placeholder="Enter your name"
-    )
-
-    st.markdown("### Rate your skills")
-
-    st.caption("0 = Beginner | 10 = Very strong")
-
-    skill_values = {}
-
-    for feature in FEATURES:
-        skill_values[feature] = st.slider(
-            feature,
-            min_value=0,
-            max_value=10,
-            value=5,
-            step=1
+    if st.session_state.profile.get("name"):
+        st.markdown("### Current profile")
+        st.write(st.session_state.profile["name"])
+        st.caption(
+            st.session_state.profile.get("status", "Not specified")
         )
 
-    analyze = st.button(
-        "🚀 Recommend Careers",
-        type="primary",
-        use_container_width=True
+    st.progress(
+        {
+            "Welcome": 0.0,
+            "Profile": 0.25,
+            "Assessment": 0.50,
+            "Results": 1.0 if st.session_state.assessment_done else 0.50
+        }[st.session_state.page]
     )
 
+    st.caption("Your career journey, one step at a time.")
 
-# ==================================================
-# MAIN PAGE
-# ==================================================
-st.markdown(
-    '<div class="main-title">🎯 AI Career Recommendation System</div>',
-    unsafe_allow_html=True
-)
 
-st.markdown(
-    '<div class="subtitle">'
-    'Discover career paths that match your strengths and interests.'
-    '</div>',
-    unsafe_allow_html=True
-)
+# =====================================================
+# PAGE 1: WELCOME
+# =====================================================
+if st.session_state.page == "Welcome":
 
-col1, col2, col3 = st.columns(3)
+    st.markdown("""
+    <div class="hero">
+        <div class="hero-tag">✦ YOUR FUTURE STARTS HERE</div>
+        <h1>Discover your potential.<br>Define your career.</h1>
+        <p>
+            Welcome to CareerPath, a career exploration platform that
+            helps you understand your strengths, explore career options,
+            and identify skills to develop for your future.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
-col1.metric("Career Options", len(CAREER_DETAILS))
-col2.metric("Skills Evaluated", len(FEATURES))
-col3.metric("Skill Rating", "0–10")
+    _, center, _ = st.columns([1, 2, 1])
 
-st.divider()
+    with center:
+        if st.button(
+            "Get Started  →",
+            type="primary",
+            use_container_width=True
+        ):
+            go_to("Profile")
 
-st.subheader("📋 About this system")
+    st.write("")
 
-st.write(
-    "Rate your skills in the sidebar and click **Recommend Careers** "
-    "to see the highest-ranked careers, related skills, and areas to develop."
-)
+    st.markdown(
+        '<div class="section-title">A smarter way to explore careers</div>',
+        unsafe_allow_html=True
+    )
 
-if model is None:
+    st.markdown(
+        '<p class="section-subtitle">'
+        'A simple, guided journey to help you understand your strengths '
+        'and plan your next steps.'
+        '</p>',
+        unsafe_allow_html=True
+    )
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        st.markdown("""
+        <div class="feature-card">
+            <div style="font-size:30px;">👤</div>
+            <h3>01. Build your profile</h3>
+            <p>Tell us about your education, current status, and career goals.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with c2:
+        st.markdown("""
+        <div class="feature-card">
+            <div style="font-size:30px;">🧠</div>
+            <h3>02. Assess your skills</h3>
+            <p>Rate your strengths across technical, analytical, and creative skills.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with c3:
+        st.markdown("""
+        <div class="feature-card">
+            <div style="font-size:30px;">🚀</div>
+            <h3>03. Explore your future</h3>
+            <p>Review career suggestions and discover skills worth developing.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.write("")
+
+    a, b, c = st.columns(3)
+    a.metric("Career paths", "5")
+    b.metric("Skill indicators", "8")
+    c.metric("Assessment scale", "0–10")
+
     st.info(
-        "No compatible saved model was loaded. The app is using "
-        "skill-based scoring. Add a compatible career_model.joblib "
-        "file to use your trained model."
+        "Designed for students, graduates, job seekers, and people "
+        "exploring their next career move."
+    )
+
+    st.markdown(
+        '<div class="footer">CAREERPATH · CAREER EXPLORATION PLATFORM</div>',
+        unsafe_allow_html=True
     )
 
 
-# ==================================================
-# DISPLAY RESULTS
-# ==================================================
-if analyze:
+# =====================================================
+# PAGE 2: PROFILE
+# =====================================================
+elif st.session_state.page == "Profile":
 
-    student = {
-        feature: int(skill_values[feature])
-        for feature in FEATURES
-    }
+    st.markdown(
+        '<div class="step-label">STEP 01 OF 03</div>',
+        unsafe_allow_html=True
+    )
+    st.title("👤 Your Profile")
 
-    results, method = recommend_careers(student)
-
-    # Normalize DataFrame results, if a function returns one.
-    if isinstance(results, pd.DataFrame):
-
-        results = results.rename(columns={
-            "Career": "career",
-            "Score": "score",
-            "Probability": "score"
-        }).to_dict(orient="records")
-
-    # Ensure that results are a list of dictionaries.
-    if not isinstance(results, list):
-        results = []
-
-    valid_results = []
-
-    for item in results:
-        if isinstance(item, dict) and item.get("career") is not None:
-            try:
-                score = float(item.get("score", 0))
-            except (TypeError, ValueError):
-                score = 0.0
-
-            valid_results.append({
-                "career": str(item["career"]),
-                "score": score
-            })
-
-    results = sorted(
-        valid_results,
-        key=lambda item: item["score"],
-        reverse=True
+    st.markdown(
+        '<p class="section-subtitle">'
+        'Help us understand your background and what you want to achieve.'
+        '</p>',
+        unsafe_allow_html=True
     )
 
-    if not results:
-        st.error("No recommendations available. Please try again.")
+    old = st.session_state.profile
+
+    with st.form("profile_form"):
+
+        name = st.text_input(
+            "Full name *",
+            value=old.get("name", ""),
+            placeholder="Enter your name"
+        )
+
+        email = st.text_input(
+            "Email (optional)",
+            value=old.get("email", ""),
+            placeholder="you@example.com"
+        )
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            status_options = [
+                "Student",
+                "Working Professional",
+                "Job Seeker",
+                "Entrepreneur",
+                "Other"
+            ]
+
+            status = st.selectbox(
+                "Current status",
+                status_options,
+                index=(
+                    status_options.index(old["status"])
+                    if old.get("status") in status_options else 0
+                )
+            )
+
+            education = st.selectbox(
+                "Education level",
+                [
+                    "Undergraduate",
+                    "Diploma",
+                    "Postgraduate",
+                    "School Student",
+                    "Graduate",
+                    "Other"
+                ],
+                index=0
+            )
+
+        with col2:
+            field = st.selectbox(
+                "Field of study / work",
+                [
+                    "Artificial Intelligence & Data Science",
+                    "Computer Science / IT",
+                    "Engineering - Other",
+                    "Business / Management",
+                    "Arts / Science",
+                    "Other"
+                ],
+                index=0
+            )
+
+            goal = st.selectbox(
+                "Primary career goal",
+                [
+                    "Get a job",
+                    "Explore career options",
+                    "Improve my skills",
+                    "Start a business",
+                    "Change my career",
+                    "Higher studies"
+                ]
+            )
+
+        interests = st.multiselect(
+            "Areas of interest",
+            [
+                "Technology",
+                "Data and Analytics",
+                "Business",
+                "Design and Creativity",
+                "Communication",
+                "Research",
+                "Entrepreneurship",
+                "Marketing"
+            ],
+            default=old.get("interests", [])
+        )
+
+        submitted = st.form_submit_button(
+            "Save Profile & Continue →",
+            type="primary",
+            use_container_width=True
+        )
+
+        if submitted:
+            if not name.strip():
+                st.error("Please enter your name.")
+            else:
+                st.session_state.profile = {
+                    "name": name.strip(),
+                    "email": email.strip(),
+                    "status": status,
+                    "education": education,
+                    "field": field,
+                    "goal": goal,
+                    "interests": interests
+                }
+
+                go_to("Assessment")
+
+    st.write("")
+
+    left, right = st.columns(2)
+
+    with left:
+        if st.button("← Back to Welcome", use_container_width=True):
+            go_to("Welcome")
+
+    with right:
+        if st.session_state.profile.get("name"):
+            if st.button("Continue to Assessment →", use_container_width=True):
+                go_to("Assessment")
+
+
+# =====================================================
+# PAGE 3: ASSESSMENT
+# =====================================================
+elif st.session_state.page == "Assessment":
+
+    st.markdown(
+        '<div class="step-label">STEP 02 OF 03</div>',
+        unsafe_allow_html=True
+    )
+
+    st.title("📝 Skills Assessment")
+
+    name = st.session_state.profile.get("name", "")
+
+    if not name:
+        st.warning("Please complete your profile before starting.")
+        if st.button("Go to Profile", type="primary"):
+            go_to("Profile")
 
     else:
-
-        display_name = student_name.strip() or "Student"
-
-        # Safe indexing after checking that results is not empty.
-        best_career = results[0]["career"]
-
-        st.success(f"Analysis completed for {display_name}!")
-
-        st.markdown(f"## 🎯 Your Career Results, {display_name}")
-
-        st.write(
-            "Explore the three careers ranked highest by your model. "
-            "Each suggestion includes related skills and areas to develop."
+        st.markdown(
+            f"Welcome, **{html.escape(name)}**! Rate your current skills "
+            "honestly. There are no right or wrong answers."
         )
 
-        st.caption(f"Recommendation method: {method}")
+        st.caption(
+            "0 = Needs development · 5 = Intermediate · 10 = Very strong"
+        )
 
-        # ------------------------------------------
-        # TOP THREE CAREERS
-        # ------------------------------------------
-        for rank, item in enumerate(results[:3], start=1):
+        st.progress(0.67, text="Step 2: Skills assessment")
 
-            career = item["career"]
-            score = item["score"]
+        with st.form("assessment_form"):
 
-            details = CAREER_DETAILS.get(
+            st.markdown("### 💻 Technical skills")
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.session_state.ratings["Python"] = st.slider(
+                    "Python",
+                    0, 10,
+                    int(st.session_state.ratings["Python"])
+                )
+
+                st.session_state.ratings["DataAnalysis"] = st.slider(
+                    "Data Analysis",
+                    0, 10,
+                    int(st.session_state.ratings["DataAnalysis"])
+                )
+
+            with col2:
+                st.session_state.ratings["Maths"] = st.slider(
+                    "Mathematics",
+                    0, 10,
+                    int(st.session_state.ratings["Maths"])
+                )
+
+                st.session_state.ratings["ProblemSolving"] = st.slider(
+                    "Problem Solving",
+                    0, 10,
+                    int(st.session_state.ratings["ProblemSolving"])
+                )
+
+            st.divider()
+            st.markdown("### 🎨 Professional skills")
+
+            col3, col4 = st.columns(2)
+
+            with col3:
+                st.session_state.ratings["Communication"] = st.slider(
+                    "Communication",
+                    0, 10,
+                    int(st.session_state.ratings["Communication"])
+                )
+
+                st.session_state.ratings["Creativity"] = st.slider(
+                    "Creativity",
+                    0, 10,
+                    int(st.session_state.ratings["Creativity"])
+                )
+
+            with col4:
+                st.session_state.ratings["Business"] = st.slider(
+                    "Business Skills",
+                    0, 10,
+                    int(st.session_state.ratings["Business"])
+                )
+
+                st.session_state.ratings["Design"] = st.slider(
+                    "Design Skills",
+                    0, 10,
+                    int(st.session_state.ratings["Design"])
+                )
+
+            st.write("")
+
+            submit_assessment = st.form_submit_button(
+                "Submit Assessment & View Results →",
+                type="primary",
+                use_container_width=True
+            )
+
+            if submit_assessment:
+                results, method = recommend_careers(
+                    st.session_state.ratings
+                )
+
+                if results:
+                    st.session_state.results = results
+                    st.session_state.method = method
+                    st.session_state.assessment_done = True
+                    go_to("Results")
+                else:
+                    st.error("Unable to generate recommendations.")
+
+        st.write("")
+
+        left, right = st.columns(2)
+
+        with left:
+            if st.button("← Back to Profile", use_container_width=True):
+                go_to("Profile")
+
+        with right:
+            if st.button("Reset Ratings", use_container_width=True):
+                st.session_state.ratings = {
+                    feature: 5 for feature in FEATURES
+                }
+                st.rerun()
+
+
+# =====================================================
+# PAGE 4: RESULTS
+# =====================================================
+elif st.session_state.page == "Results":
+
+    st.markdown(
+        '<div class="step-label">STEP 03 OF 03</div>',
+        unsafe_allow_html=True
+    )
+
+    st.title("🎯 Your Career Results")
+
+    if not st.session_state.assessment_done or not st.session_state.results:
+        st.info("Complete your skills assessment to see your results.")
+
+        if st.button("Start Assessment →", type="primary"):
+            go_to("Assessment")
+
+    else:
+        profile = st.session_state.profile
+        results = st.session_state.results
+
+        safe_name = html.escape(profile.get("name", "Student"))
+
+        st.markdown(
+            f"Hello, **{safe_name}**! Here are your highest-ranked "
+            "career suggestions based on your assessment."
+        )
+
+        st.caption(
+            f"Recommendation method: {st.session_state.method}. "
+            "Treat these scores as guidance, not a guarantee of suitability."
+        )
+
+        top_results = results[:3]
+
+        for rank, result in enumerate(top_results, start=1):
+
+            career = result["career"]
+            score = result["score"]
+
+            details = CAREERS.get(
                 career,
                 {
                     "icon": "🌟",
-                    "description": "Explore this career and its requirements.",
-                    "skills": ["Research required skills"],
-                    "develop": ["Take beginner courses", "Build practical projects"]
+                    "description": "Explore the requirements for this career.",
+                    "skills": ["Research the role"],
+                    "improve": ["Explore courses", "Build practical experience"]
                 }
             )
 
-            icon = details["icon"]
             safe_career = html.escape(career)
             safe_description = html.escape(details["description"])
 
             st.markdown(
                 f"""
                 <div class="career-card">
-                    <div class="career-title">
-                        {icon} #{rank} {safe_career}
-                    </div>
-                    <p>{safe_description}</p>
-                    <div class="career-score">
-                        Relative score: {score:.2f}%
-                    </div>
+                    <h3>{details["icon"]} #{rank} {safe_career}</h3>
+                    <p class="muted">{safe_description}</p>
+                    <strong>Relative score: {score:.2f}%</strong>
                 </div>
                 """,
                 unsafe_allow_html=True
             )
 
-            left, right = st.columns(2)
+            col1, col2 = st.columns(2)
 
-            with left:
+            with col1:
                 st.markdown("**💡 Related skills**")
                 for skill in details["skills"]:
                     st.markdown(f"- {skill}")
 
-            with right:
+            with col2:
                 st.markdown("**📚 Areas to develop**")
-                for skill in details["develop"]:
+                for skill in details["improve"]:
                     st.markdown(f"- {skill}")
 
-            st.divider()
+        st.divider()
 
-        # ------------------------------------------
-        # SKILL PROFILE - COMPATIBLE CHART
-        # ------------------------------------------
         st.subheader("📊 Your Skill Profile")
 
         skill_df = pd.DataFrame({
             "Skill": FEATURES,
             "Rating": [
-                student[feature] for feature in FEATURES
+                st.session_state.ratings[f] for f in FEATURES
             ]
         })
 
-        # Do not use unsupported y_min or y_max arguments.
-        st.bar_chart(
-            skill_df.set_index("Skill")
-        )
+        # Compatible with Streamlit versions that do not support y_min/y_max.
+        st.bar_chart(skill_df.set_index("Skill"))
 
-        st.caption("Each bar represents your rating for a skill out of 10.")
+        st.caption("Skill ratings use a scale from 0 to 10.")
 
-        # ------------------------------------------
-        # COMPLETE CAREER RANKING
-        # ------------------------------------------
         st.subheader("🏆 Complete Career Ranking")
 
-        ranking_df = pd.DataFrame(results)
-
-        ranking_df = ranking_df.rename(columns={
+        ranking_df = pd.DataFrame(results).rename(columns={
             "career": "Career",
             "score": "Relative Score (%)"
         })
@@ -501,43 +870,51 @@ if analyze:
             hide_index=True
         )
 
-        # ------------------------------------------
-        # DOWNLOAD REPORT
-        # ------------------------------------------
         report = pd.DataFrame([{
-            "Student": display_name,
-            "Top Career": best_career,
-            "Recommendation Method": method,
-            **student
+            "Student": profile.get("name", ""),
+            "Email": profile.get("email", ""),
+            "Status": profile.get("status", ""),
+            "Education": profile.get("education", ""),
+            "Field": profile.get("field", ""),
+            "Career Goal": profile.get("goal", ""),
+            "Top Career": results[0]["career"],
+            "Recommendation Method": st.session_state.method,
+            **st.session_state.ratings
         }])
 
-        csv_data = report.to_csv(index=False).encode("utf-8")
-
         st.download_button(
-            label="⬇️ Download Career Report (CSV)",
-            data=csv_data,
-            file_name="career_recommendation_report.csv",
-            mime="text/csv"
+            "⬇️ Download Career Report (CSV)",
+            data=report.to_csv(index=False).encode("utf-8"),
+            file_name="career_report.csv",
+            mime="text/csv",
+            use_container_width=True
         )
 
-else:
-    st.info(
-        "👈 Rate your skills in the sidebar and click "
-        "**Recommend Careers** to view your results."
-    )
+        st.write("")
 
-    st.subheader("🌟 Explore Career Paths")
+        col1, col2 = st.columns(2)
 
-    cards = st.columns(3)
+        with col1:
+            if st.button("← Edit Assessment", use_container_width=True):
+                go_to("Assessment")
 
-    for index, (career, details) in enumerate(CAREER_DETAILS.items()):
-        with cards[index % 3]:
-            st.markdown(f"### {details['icon']} {career}")
-            st.write(details["description"])
+        with col2:
+            if st.button("Start New Assessment", use_container_width=True):
+                st.session_state.ratings = {
+                    feature: 5 for feature in FEATURES
+                }
+                st.session_state.results = []
+                st.session_state.method = ""
+                st.session_state.assessment_done = False
+                go_to("Welcome")
 
-st.divider()
 
-st.caption(
-    "AI Career Recommendation System | Educational project. "
-    "Recommendations are guidance, not a guarantee of career success."
+# =====================================================
+# FOOTER
+# =====================================================
+st.markdown(
+    '<div class="footer">'
+    'CAREERPATH © 2026 · AI CAREER RECOMMENDATION SYSTEM'
+    '</div>',
+    unsafe_allow_html=True
 )
