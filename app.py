@@ -1,16 +1,22 @@
 
+     
 import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
 
+# --------------------------------------------------
+# PAGE CONFIGURATION
+# --------------------------------------------------
 st.set_page_config(
     page_title="AI Career Recommendation System",
     page_icon="🎓",
-    layout="centered"
+    layout="wide"
 )
 
-# Custom styling
+# --------------------------------------------------
+# CUSTOM CSS
+# --------------------------------------------------
 st.markdown("""
 <style>
 .stApp {
@@ -19,36 +25,44 @@ st.markdown("""
 .main-title {
     text-align: center;
     color: #243b70;
-    font-size: 38px;
+    font-size: 40px;
     font-weight: bold;
 }
 .subtitle {
     text-align: center;
     color: #555b70;
-    font-size: 17px;
+    font-size: 18px;
 }
 div.stButton > button {
-    width: 100%;
     border-radius: 10px;
     font-weight: bold;
-    padding: 10px;
+    min-height: 42px;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# Load trained model
+# --------------------------------------------------
+# LOAD TRAINED MODEL
+# --------------------------------------------------
 @st.cache_resource
 def load_model():
     return joblib.load("career_model.joblib")
 
+
 try:
     model = load_model()
-except Exception as e:
+except Exception as error:
     st.error("Unable to load the trained model.")
-    st.write("Check that career_model.joblib is in the same GitHub folder as app.py.")
+    st.info(
+        "Check that career_model.joblib is in the same "
+        "GitHub folder as app.py."
+    )
     st.stop()
 
-# Initialize session state
+
+# --------------------------------------------------
+# SESSION STATE
+# --------------------------------------------------
 if "page" not in st.session_state:
     st.session_state.page = "welcome"
 
@@ -56,26 +70,84 @@ if "name" not in st.session_state:
     st.session_state.name = ""
 
 if "profession" not in st.session_state:
-    st.session_state.profession = ""
+    st.session_state.profession = "Student"
 
 if "other_role" not in st.session_state:
     st.session_state.other_role = ""
 
+if "results" not in st.session_state:
+    st.session_state.results = None
 
-# PAGE 1: WELCOME
+
+# --------------------------------------------------
+# CAREER EXPLANATION CONFIGURATION
+# --------------------------------------------------
+career_skills = {
+    "Data Scientist": [
+        "Python", "Maths", "Data Analysis", "Problem Solving"
+    ],
+    "Data Analyst": [
+        "Data Analysis", "Maths", "Python", "Problem Solving"
+    ],
+    "Software Developer": [
+        "Python", "Problem Solving", "Maths"
+    ],
+    "Business Analyst": [
+        "Business Interest", "Communication", "Data Analysis"
+    ],
+    "AI Engineer": [
+        "Python", "Maths", "Problem Solving", "Data Analysis"
+    ],
+    "Web Developer": [
+        "Python", "Creativity", "Problem Solving"
+    ],
+    "UI/UX Designer": [
+        "Design Interest", "Creativity", "Communication"
+    ],
+    "Graphic Designer": [
+        "Design Interest", "Creativity"
+    ],
+    "Business Manager": [
+        "Business Interest", "Communication"
+    ]
+}
+
+career_descriptions = {
+    "Data Scientist":
+        "Analyzes data and builds models to identify patterns and support decisions.",
+    "Data Analyst":
+        "Studies data, prepares reports, and finds useful business insights.",
+    "Software Developer":
+        "Designs, develops, tests, and maintains software applications.",
+    "Business Analyst":
+        "Studies business needs and uses data to suggest improvements.",
+    "AI Engineer":
+        "Develops and integrates artificial intelligence solutions.",
+    "Web Developer":
+        "Builds and maintains websites and web applications.",
+    "UI/UX Designer":
+        "Designs user-friendly digital experiences and interfaces.",
+    "Graphic Designer":
+        "Creates visual designs for communication and branding.",
+    "Business Manager":
+        "Coordinates business activities, people, and organizational goals."
+}
+
+
+# --------------------------------------------------
+# PAGE 1: WELCOME PAGE
+# --------------------------------------------------
 if st.session_state.page == "welcome":
 
     st.write("")
-    st.write("")
-
     st.markdown(
-        '<div class="main-title">🎓 Welcome!</div>',
+        '<div class="main-title">🎓 AI Career Recommendation System</div>',
         unsafe_allow_html=True
     )
 
     st.markdown(
         '<div class="subtitle">'
-        'AI Career Recommendation System'
+        'Discover career possibilities based on your skills and interests'
         '</div>',
         unsafe_allow_html=True
     )
@@ -83,130 +155,168 @@ if st.session_state.page == "welcome":
     st.write("")
     st.write("")
 
-    st.image(
-        "https://images.unsplash.com/photo-1521737711867-e3b97375f902"
-        "?auto=format&fit=crop&w=1000&q=80",
-        use_container_width=True
-    )
+    left, right = st.columns([1, 1])
 
-    st.subheader("Discover Your Career Possibilities 🚀")
+    with left:
+        st.subheader("🚀 Welcome to Your Career Journey!")
 
-    st.write(
-        "Explore potential career paths based on your skills, "
-        "interests, and strengths."
-    )
+        st.write(
+            "Not sure which career path to explore? "
+            "This application helps you discover potential careers "
+            "based on your self-rated skills and interests."
+        )
 
-    st.info(
-        "Tell us a little about yourself, complete a simple skill "
-        "assessment, and explore your career recommendations."
-    )
+        st.markdown("""
+        **What you can do here:**
 
-    if st.button("Get Started →", type="primary"):
-        st.session_state.page = "profile"
-        st.rerun()
+        - 👤 Enter your personal profile
+        - 🎯 Select your profession
+        - 🧠 Rate your skills from 1 to 5
+        - 🏆 Explore your top 3 career suggestions
+        - 💡 Understand why each career was suggested
+        - 📥 Download your results
+        """)
+
+        if st.button("Get Started →", type="primary",
+                     use_container_width=True):
+            st.session_state.page = "profile"
+            st.rerun()
+
+    with right:
+        st.markdown("""
+        <div style="
+            background-color: white;
+            padding: 35px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        ">
+            <div style="font-size: 85px;">🎯</div>
+            <h2 style="color:#243b70;">Find Your Direction</h2>
+            <p style="color:#555;">
+            Understand your strengths and explore possible
+            career paths with a machine learning demonstration.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.divider()
+    st.caption("AI-powered demonstration • Learn • Explore • Grow")
 
 
-# PAGE 2: USER DETAILS
+# --------------------------------------------------
+# PAGE 2: USER PROFILE
+# --------------------------------------------------
 elif st.session_state.page == "profile":
 
     st.title("👤 Tell Us About Yourself")
     st.write("Enter your details to personalize your experience.")
 
-    name = st.text_input(
-        "Your Name",
-        value=st.session_state.name,
-        placeholder="Enter your full name"
-    )
+    with st.form("profile_form"):
 
-    profession_options = [
-        "Student",
-        "Working Professional",
-        "Job Seeker",
-        "Entrepreneur",
-        "Other"
-    ]
-
-    current_profession = st.session_state.profession
-    default_index = (
-        profession_options.index(current_profession)
-        if current_profession in profession_options
-        else 0
-    )
-
-    profession = st.selectbox(
-        "Your Profession",
-        profession_options,
-        index=default_index
-    )
-
-    other_role = ""
-    if profession == "Other":
-        other_role = st.text_input(
-            "Specify Your Role",
-            value=st.session_state.other_role,
-            placeholder="e.g., Freelancer, Career Changer"
+        name = st.text_input(
+            "Your Name",
+            value=st.session_state.name,
+            placeholder="Enter your name"
         )
 
-    st.write("")
+        profession_options = [
+            "Student",
+            "Working Professional",
+            "Job Seeker",
+            "Entrepreneur",
+            "Other"
+        ]
 
-    col1, col2 = st.columns(2)
+        profession = st.selectbox(
+            "Choose Your Profession",
+            profession_options,
+            index=(
+                profession_options.index(st.session_state.profession)
+                if st.session_state.profession in profession_options
+                else 0
+            )
+        )
 
-    with col1:
-        if st.button("← Back"):
-            st.session_state.page = "welcome"
+        other_role = ""
+        if profession == "Other":
+            other_role = st.text_input(
+                "Specify Your Role",
+                value=st.session_state.other_role,
+                placeholder="e.g. Freelancer, Teacher, Career Changer"
+            )
+
+        continue_clicked = st.form_submit_button(
+            "Continue to Skill Assessment →",
+            type="primary",
+            use_container_width=True
+        )
+
+    if continue_clicked:
+        if not name.strip():
+            st.warning("Please enter your name.")
+        elif profession == "Other" and not other_role.strip():
+            st.warning("Please specify your role.")
+        else:
+            st.session_state.name = name.strip()
+            st.session_state.profession = profession
+            st.session_state.other_role = other_role.strip()
+            st.session_state.results = None
+            st.session_state.page = "assessment"
             st.rerun()
 
-    with col2:
-        if st.button("Continue →", type="primary"):
-            if not name.strip():
-                st.warning("Please enter your name.")
-            elif profession == "Other" and not other_role.strip():
-                st.warning("Please specify your role.")
-            else:
-                st.session_state.name = name.strip()
-                st.session_state.profession = profession
-                st.session_state.other_role = other_role.strip()
-                st.session_state.page = "assessment"
-                st.rerun()
+    if st.button("← Back to Welcome"):
+        st.session_state.page = "welcome"
+        st.rerun()
 
 
-# PAGE 3: SKILL ASSESSMENT
+# --------------------------------------------------
+# PAGE 3: SKILL ASSESSMENT AND RESULTS
+# --------------------------------------------------
 elif st.session_state.page == "assessment":
 
     name = st.session_state.name
-    profession = st.session_state.profession
 
-    if profession == "Other":
+    if st.session_state.profession == "Other":
         display_role = st.session_state.other_role
     else:
-        display_role = profession
+        display_role = st.session_state.profession
 
     st.title("🧠 Career Skill Assessment")
-
     st.write(f"Welcome, **{name}**! 👋")
-    st.write(f"Your selected role: **{display_role}**")
+    st.write(f"**Your profession:** {display_role}")
 
-    st.write(
-        "Rate your current skills from 1 to 5. "
-        "Choose the ratings that best reflect your abilities and interests."
+    st.info(
+        "Rate your current skills from 1 (beginner/low) "
+        "to 5 (strong/high). Answer honestly for more useful suggestions."
     )
 
+    # SKILL INPUT FORM
     with st.form("career_form"):
 
-        python = st.slider("Python", 1, 5, 3)
-        maths = st.slider("Mathematics", 1, 5, 3)
-        communication = st.slider("Communication", 1, 5, 3)
-        creativity = st.slider("Creativity", 1, 5, 3)
-        business = st.slider("Business Interest", 1, 5, 3)
-        design = st.slider("Design Interest", 1, 5, 3)
-        problem = st.slider("Problem Solving", 1, 5, 3)
-        data = st.slider("Data Analysis", 1, 5, 3)
+        st.subheader("Rate Your Skills")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            python = st.slider("Python", 1, 5, 3)
+            maths = st.slider("Mathematics", 1, 5, 3)
+            communication = st.slider("Communication", 1, 5, 3)
+            creativity = st.slider("Creativity", 1, 5, 3)
+
+        with col2:
+            business = st.slider("Business Interest", 1, 5, 3)
+            design = st.slider("Design Interest", 1, 5, 3)
+            problem = st.slider("Problem Solving", 1, 5, 3)
+            data = st.slider("Data Analysis", 1, 5, 3)
 
         submit = st.form_submit_button(
-            "✨ Recommend Careers",
-            type="primary"
+            "✨ Recommend My Careers",
+            type="primary",
+            use_container_width=True
         )
 
+    # GENERATE PREDICTIONS
     if submit:
 
         student = pd.DataFrame([{
@@ -220,25 +330,114 @@ elif st.session_state.page == "assessment":
             "DataAnalysis": data
         }])
 
-        probabilities = model.predict_proba(student)[0]
-        classes = model.named_steps["classifier"].classes_
+        try:
+            probabilities = model.predict_proba(student)[0]
+            classes = model.named_steps["classifier"].classes_
 
-        top = np.argsort(probabilities)[::-1][:3]
+            top_indices = np.argsort(probabilities)[::-1][:3]
 
-        results = pd.DataFrame({
-            "Career": classes[top],
-            "Model Score (%)": np.round(
-                probabilities[top] * 100, 1
+            skill_values = {
+                "Python": python,
+                "Maths": maths,
+                "Communication": communication,
+                "Creativity": creativity,
+                "Business Interest": business,
+                "Design Interest": design,
+                "Problem Solving": problem,
+                "Data Analysis": data
+            }
+
+            result_rows = []
+
+            for idx in top_indices:
+
+                career = str(classes[idx])
+
+                relevant_skills = career_skills.get(
+                    career,
+                    [
+                        "Python",
+                        "Problem Solving",
+                        "Communication"
+                    ]
+                )
+
+                strong_skills = [
+                    skill for skill in relevant_skills
+                    if skill_values[skill] >= 4
+                ]
+
+                if strong_skills:
+                    reason = (
+                        "You rated yourself highly in "
+                        + ", ".join(strong_skills)
+                        + ". These skills are relevant to this career."
+                    )
+                else:
+                    best_skill = max(
+                        relevant_skills,
+                        key=lambda skill: skill_values[skill]
+                    )
+
+                    reason = (
+                        f"Your highest-rated skill among those listed "
+                        f"for this career is {best_skill} "
+                        f"({skill_values[best_skill]}/5). "
+                        "Developing the other relevant skills may help."
+                    )
+
+                description = career_descriptions.get(
+                    career,
+                    "Explore the responsibilities and required skills "
+                    "for this career to see whether it interests you."
+                )
+
+                result_rows.append({
+                    "Career": career,
+                    "Model Score (%)": round(
+                        float(probabilities[idx]) * 100, 1
+                    ),
+                    "Career Overview": description,
+                    "Why Recommended": reason
+                })
+
+            st.session_state.results = pd.DataFrame(result_rows)
+
+        except Exception as error:
+            st.error(
+                "An error occurred while generating recommendations."
             )
-        })
+            st.code(str(error))
 
-        st.session_state.results = results
+    # DISPLAY RESULTS
+    if st.session_state.results is not None:
 
-    if "results" in st.session_state:
+        st.divider()
+        st.header(f"🏆 Career Recommendations for {name}")
 
-        st.success(f"Here are your career suggestions, {name}! 🎉")
+        st.write(
+            "These are the top three predictions from the trained model. "
+            "Review the reasons and career descriptions below."
+        )
 
-        st.subheader("🏆 Your Top 3 Career Recommendations")
+        for i, row in st.session_state.results.iterrows():
+
+            with st.container(border=True):
+
+                st.subheader(f"{i + 1}. {row['Career']}")
+
+                st.metric(
+                    "Model Score",
+                    f"{row['Model Score (%)']:.1f}%"
+                )
+
+                st.markdown("**💼 About This Career**")
+                st.write(row["Career Overview"])
+
+                st.markdown("**💡 Why Was This Career Recommended?**")
+                st.write(row["Why Recommended"])
+
+        st.subheader("📊 Results Summary")
 
         st.dataframe(
             st.session_state.results,
@@ -246,21 +445,36 @@ elif st.session_state.page == "assessment":
             hide_index=True
         )
 
+        csv_data = st.session_state.results.to_csv(index=False)
+
         st.download_button(
-            "⬇️ Download Results",
-            data=st.session_state.results.to_csv(index=False),
-            file_name=f"{name.replace(' ', '_')}_career_recommendations.csv",
-            mime="text/csv"
+            "📥 Download Career Report",
+            data=csv_data,
+            file_name=(
+                f"{name.replace(' ', '_')}_career_recommendations.csv"
+            ),
+            mime="text/csv",
+            use_container_width=True
         )
 
         st.caption(
-            "These are demonstration predictions from a small sample "
-            "dataset, not a validated career assessment."
+            "Important: This is a demonstration project using a small "
+            "sample dataset. Model scores are not guaranteed probabilities "
+            "of job success, and recommendations are not a validated "
+            "career assessment."
         )
 
     st.write("")
 
-    if st.button("← Back to Welcome Page"):
-        st.session_state.page = "welcome"
-        st.session_state.pop("results", None)
-        st.rerun()
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("← Edit Profile", use_container_width=True):
+            st.session_state.page = "profile"
+            st.rerun()
+
+    with col2:
+        if st.button("Start New Assessment", use_container_width=True):
+            st.session_state.results = None
+            st.session_state.page = "assessment"
+            st.rerun()
