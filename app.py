@@ -31,9 +31,8 @@ FEATURES = [
 
 MODEL_PATH = "career_model.joblib"
 
-
 # =====================================================
-# CAREER DETAILS
+# CAREER INFORMATION
 # =====================================================
 
 CAREERS = {
@@ -43,28 +42,24 @@ CAREERS = {
         "skills": ["Python", "SQL", "Statistics", "Machine Learning"],
         "improve": ["Practice Python", "Learn SQL", "Build data science projects"]
     },
-
     "Software Developer": {
         "icon": "💻",
         "description": "Design, develop and maintain software applications.",
         "skills": ["Python", "Java", "Problem Solving", "Git"],
         "improve": ["Learn data structures", "Practice coding", "Build applications"]
     },
-
     "Business Analyst": {
         "icon": "📈",
         "description": "Analyze business requirements and support better decisions.",
         "skills": ["Communication", "Excel", "SQL", "Business Analysis"],
         "improve": ["Improve Excel", "Practice SQL", "Learn business analytics"]
     },
-
     "UI UX Designer": {
         "icon": "🎨",
         "description": "Create attractive and user-friendly digital experiences.",
         "skills": ["Creativity", "Figma", "Design", "User Research"],
         "improve": ["Learn Figma", "Create wireframes", "Build a portfolio"]
     },
-
     "Digital Marketer": {
         "icon": "📱",
         "description": "Promote brands and products through digital marketing strategies.",
@@ -73,9 +68,8 @@ CAREERS = {
     }
 }
 
-
 # =====================================================
-# SESSION STATE - FIXES NAVIGATION KEYERROR
+# SESSION STATE
 # =====================================================
 
 DEFAULTS = {
@@ -91,12 +85,15 @@ for key, value in DEFAULTS.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
-# Normalize unexpected page values from previous app versions.
-current_page = str(st.session_state.get("page", "Welcome")).strip().lower()
-
 page_lookup = {p.lower(): p for p in PAGES}
 
-st.session_state.page = page_lookup.get(current_page, "Welcome")
+current_page = str(
+    st.session_state.get("page", "Welcome")
+).strip().lower()
+
+st.session_state.page = page_lookup.get(
+    current_page, "Welcome"
+)
 
 if not isinstance(st.session_state.profile, dict):
     st.session_state.profile = {}
@@ -109,16 +106,19 @@ for feature in FEATURES:
 
 
 def navigate(page):
-    if page in PAGES:
-        st.session_state.page = page
-    else:
-        st.session_state.page = "Welcome"
-
+    st.session_state.page = page if page in PAGES else "Welcome"
     st.rerun()
 
 
+def reset_assessment():
+    st.session_state.ratings = {f: 5 for f in FEATURES}
+    st.session_state.results = []
+    st.session_state.method = ""
+    st.session_state.assessment_done = False
+
+
 # =====================================================
-# PROFESSIONAL CSS
+# CSS DESIGN
 # =====================================================
 
 st.markdown("""
@@ -126,12 +126,16 @@ st.markdown("""
 
 .stApp {
     background: #F5F7FC;
+    color: #14213D;
 }
 
 .block-container {
     padding-top: 2rem;
+    padding-bottom: 2rem;
     max-width: 1250px;
 }
+
+/* SIDEBAR */
 
 [data-testid="stSidebar"] {
     background: #14213D;
@@ -141,8 +145,42 @@ st.markdown("""
 [data-testid="stSidebar"] h2,
 [data-testid="stSidebar"] h3,
 [data-testid="stSidebar"] p {
-    color: white;
+    color: #FFFFFF !important;
 }
+
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"] {
+    color: #CBD5E1 !important;
+}
+
+[data-testid="stSidebar"] .stButton button {
+    width: 100%;
+    min-height: 48px;
+    text-align: left;
+    justify-content: flex-start;
+    padding-left: 18px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 10px;
+}
+
+[data-testid="stSidebar"] .stButton button[kind="secondary"] {
+    background: #FFFFFF;
+    color: #14213D !important;
+    border: 1px solid #E2E8F0;
+}
+
+[data-testid="stSidebar"] .stButton button[kind="primary"] {
+    background: #E54829;
+    color: white !important;
+    border: none;
+}
+
+[data-testid="stSidebar"] .stButton button p {
+    color: inherit !important;
+    font-weight: 600;
+}
+
+/* HERO SECTION */
 
 .hero {
     background: linear-gradient(120deg, #14213D, #2356A0);
@@ -152,48 +190,56 @@ st.markdown("""
     margin-bottom: 25px;
 }
 
-.hero h1 {
+.hero-tag {
+    display: inline-block;
+    background: rgba(255,255,255,0.13);
     color: white;
-    font-size: clamp(32px, 5vw, 52px);
+    padding: 8px 15px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+
+.hero h1 {
+    color: #FFFFFF !important;
+    font-size: clamp(30px, 5vw, 52px);
     font-weight: 800;
     line-height: 1.2;
+    margin-bottom: 20px;
 }
 
 .hero p {
-    color: #DFE9FF;
+    color: #DFE9FF !important;
     font-size: 17px;
     line-height: 1.8;
     max-width: 650px;
 }
 
-.hero-tag {
-    display: inline-block;
-    background: #FFFFFF20;
-    color: white;
-    padding: 8px 15px;
-    border-radius: 30px;
-    font-size: 13px;
-    margin-bottom: 20px;
-}
+/* FEATURE CARDS */
 
 .feature-card {
     background: white;
     padding: 25px;
     border-radius: 16px;
     border: 1px solid #E2E8F0;
-    min-height: 185px;
+    min-height: 190px;
     margin-bottom: 15px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
 }
 
 .feature-card h3 {
-    color: #17365D;
+    color: #17365D !important;
     font-size: 20px;
+    margin-bottom: 15px;
 }
 
 .feature-card p {
-    color: #64748B;
+    color: #64748B !important;
     line-height: 1.7;
 }
+
+/* CAREER CARDS */
 
 .career-card {
     background: white;
@@ -201,16 +247,23 @@ st.markdown("""
     border-radius: 16px;
     border: 1px solid #E2E8F0;
     margin: 15px 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
 }
 
 .career-card h3 {
-    color: #17365D;
+    color: #17365D !important;
+    margin-bottom: 12px;
+}
+
+.career-card p {
+    color: #64748B !important;
 }
 
 .score {
     color: #2563EB;
-    font-weight: bold;
+    font-weight: 700;
     font-size: 18px;
+    margin-top: 12px;
 }
 
 .step-label {
@@ -218,13 +271,32 @@ st.markdown("""
     font-weight: 800;
     font-size: 13px;
     letter-spacing: 1px;
+    margin-bottom: 12px;
 }
 
-div.stButton > button {
+/* BUTTONS */
+
+div.stButton > button,
+div.stFormSubmitButton > button {
     border-radius: 10px;
     min-height: 45px;
     font-weight: 600;
 }
+
+div.stButton > button[kind="primary"],
+div.stFormSubmitButton > button[kind="primary"] {
+    background: #E54829;
+    border-color: #E54829;
+    color: white;
+}
+
+div.stButton > button[kind="primary"]:hover,
+div.stFormSubmitButton > button[kind="primary"]:hover {
+    background: #C8371B;
+    border-color: #C8371B;
+}
+
+/* METRICS */
 
 div[data-testid="stMetric"] {
     background: white;
@@ -233,11 +305,33 @@ div[data-testid="stMetric"] {
     border-radius: 12px;
 }
 
+/* FOOTER */
+
 .footer {
     text-align: center;
     color: #64748B;
     font-size: 12px;
     padding: 30px;
+}
+
+.footer p {
+    color: #64748B;
+}
+
+/* MOBILE */
+
+@media (max-width: 768px) {
+    .hero {
+        padding: 30px 22px;
+    }
+
+    .hero p {
+        font-size: 15px;
+    }
+
+    .feature-card {
+        min-height: auto;
+    }
 }
 
 </style>
@@ -255,7 +349,6 @@ def load_model():
             return joblib.load(MODEL_PATH)
         except Exception:
             return None
-
     return None
 
 
@@ -329,6 +422,12 @@ def recommend_careers(ratings):
     )
 
     try:
+        if hasattr(model, "feature_names_in_"):
+            expected = list(model.feature_names_in_)
+            if set(expected) != set(FEATURES):
+                raise ValueError("Model features do not match assessment.")
+            input_df = input_df[expected]
+
         if hasattr(model, "predict_proba"):
 
             probabilities = model.predict_proba(input_df)[0]
@@ -347,13 +446,15 @@ def recommend_careers(ratings):
                     key=lambda x: x["score"],
                     reverse=True
                 )
-
                 return results, "Trained ML model"
 
         prediction = model.predict(input_df)[0]
 
         return [
-            {"career": str(prediction), "score": 100.0}
+            {
+                "career": str(prediction),
+                "score": 100.0
+            }
         ], "Trained ML model"
 
     except Exception:
@@ -361,7 +462,7 @@ def recommend_careers(ratings):
 
 
 # =====================================================
-# SIDEBAR NAVIGATION
+# SIDEBAR
 # =====================================================
 
 with st.sidebar:
@@ -371,26 +472,27 @@ with st.sidebar:
 
     st.divider()
 
+    icons = {
+        "Welcome": "🏠",
+        "Profile": "👤",
+        "Assessment": "📝",
+        "Results": "📊"
+    }
+
     for page in PAGES:
 
-        icons = {
-            "Welcome": "🏠",
-            "Profile": "👤",
-            "Assessment": "📝",
-            "Results": "📊"
-        }
+        active = st.session_state.page == page
 
         if st.button(
             f"{icons[page]}  {page}",
             key=f"nav_{page}",
             use_container_width=True,
-            type="primary" if st.session_state.page == page else "secondary"
+            type="primary" if active else "secondary"
         ):
             navigate(page)
 
     st.divider()
 
-    # SAFE PROGRESS - NO KEYERROR
     progress_values = {
         "Welcome": 0.0,
         "Profile": 0.25,
@@ -399,8 +501,7 @@ with st.sidebar:
     }
 
     progress = progress_values.get(
-        st.session_state.page,
-        0.0
+        st.session_state.page, 0.0
     )
 
     st.progress(progress)
@@ -408,7 +509,9 @@ with st.sidebar:
     st.caption("Complete your career journey.")
 
     if st.session_state.profile.get("name"):
-        st.write("👤", st.session_state.profile["name"])
+        st.write(
+            "👤 " + st.session_state.profile["name"]
+        )
 
 
 # =====================================================
@@ -417,22 +520,20 @@ with st.sidebar:
 
 if st.session_state.page == "Welcome":
 
+    # FIX: HTML starts at the beginning of the line.
+    # This prevents Markdown from displaying HTML as code.
+
     st.markdown("""
-    <div class="hero">
-        <div class="hero-tag">✦ AI-POWERED CAREER EXPLORATION</div>
-
-        <h1>
-            Discover Your Strengths.<br>
-            Shape Your Future.
-        </h1>
-
-        <p>
-            Your career journey starts with understanding yourself.
-            Explore your skills, discover suitable career opportunities,
-            and take confident steps toward your professional goals.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+<div class="hero">
+    <div class="hero-tag">✦ AI-POWERED CAREER EXPLORATION</div>
+    <h1>Discover Your Strengths.<br>Shape Your Future.</h1>
+    <p>
+        Your career journey starts with understanding yourself.
+        Explore your skills, discover suitable career opportunities,
+        and take confident steps toward your professional goals.
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
     left, center, right = st.columns([1, 2, 1])
 
@@ -457,30 +558,36 @@ if st.session_state.page == "Welcome":
 
     with c1:
         st.markdown("""
-        <div class="feature-card">
-            <h3>👤 Personal Profile</h3>
-            <p>Create your profile and share your educational background,
-            interests and professional goals.</p>
-        </div>
-        """, unsafe_allow_html=True)
+<div class="feature-card">
+    <h3>👤 Personal Profile</h3>
+    <p>
+        Create your profile and share your educational background,
+        interests and professional goals.
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
     with c2:
         st.markdown("""
-        <div class="feature-card">
-            <h3>🧠 Skill Assessment</h3>
-            <p>Evaluate your technical, analytical and creative abilities
-            through a simple assessment.</p>
-        </div>
-        """, unsafe_allow_html=True)
+<div class="feature-card">
+    <h3>🧠 Skill Assessment</h3>
+    <p>
+        Evaluate your technical, analytical and creative abilities
+        through a simple assessment.
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
     with c3:
         st.markdown("""
-        <div class="feature-card">
-            <h3>🚀 Career Guidance</h3>
-            <p>Discover career recommendations and understand the
-            skills required for your next step.</p>
-        </div>
-        """, unsafe_allow_html=True)
+<div class="feature-card">
+    <h3>🚀 Career Guidance</h3>
+    <p>
+        Discover career recommendations and understand the
+        skills required for your next step.
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
     st.write("")
 
@@ -529,6 +636,56 @@ elif st.session_state.page == "Profile":
 
     old = st.session_state.profile
 
+    status_options = [
+        "Student",
+        "Graduate",
+        "Job Seeker",
+        "Working Professional",
+        "Other"
+    ]
+
+    education_options = [
+        "School Student",
+        "Diploma",
+        "Undergraduate",
+        "Postgraduate",
+        "Graduate",
+        "Other"
+    ]
+
+    field_options = [
+        "Artificial Intelligence & Data Science",
+        "Computer Science",
+        "Information Technology",
+        "Other Engineering",
+        "Business / Management",
+        "Arts / Science",
+        "Other"
+    ]
+
+    goal_options = [
+        "Explore Career Options",
+        "Get a Job",
+        "Improve My Skills",
+        "Start a Business",
+        "Higher Studies",
+        "Career Change"
+    ]
+
+    interest_options = [
+        "Technology",
+        "Data Analytics",
+        "Business",
+        "Design",
+        "Communication",
+        "Research",
+        "Marketing",
+        "Entrepreneurship"
+    ]
+
+    def selected_index(options, previous):
+        return options.index(previous) if previous in options else 0
+
     with st.form("profile_form"):
 
         name = st.text_input(
@@ -544,45 +701,6 @@ elif st.session_state.page == "Profile":
         )
 
         col1, col2 = st.columns(2)
-
-        status_options = [
-            "Student",
-            "Graduate",
-            "Job Seeker",
-            "Working Professional",
-            "Other"
-        ]
-
-        education_options = [
-            "School Student",
-            "Diploma",
-            "Undergraduate",
-            "Postgraduate",
-            "Graduate",
-            "Other"
-        ]
-
-        field_options = [
-            "Artificial Intelligence & Data Science",
-            "Computer Science",
-            "Information Technology",
-            "Other Engineering",
-            "Business / Management",
-            "Arts / Science",
-            "Other"
-        ]
-
-        goal_options = [
-            "Explore Career Options",
-            "Get a Job",
-            "Improve My Skills",
-            "Start a Business",
-            "Higher Studies",
-            "Career Change"
-        ]
-
-        def selected_index(options, previous):
-            return options.index(previous) if previous in options else 0
 
         with col1:
 
@@ -624,17 +742,6 @@ elif st.session_state.page == "Profile":
                 )
             )
 
-        interest_options = [
-            "Technology",
-            "Data Analytics",
-            "Business",
-            "Design",
-            "Communication",
-            "Research",
-            "Marketing",
-            "Entrepreneurship"
-        ]
-
         interests = st.multiselect(
             "Areas of Interest",
             interest_options,
@@ -650,24 +757,34 @@ elif st.session_state.page == "Profile":
             use_container_width=True
         )
 
-        if submit:
+    if submit:
 
-            if not name.strip():
-                st.error("Please enter your name.")
+        if not name.strip():
+            st.error("Please enter your name.")
 
-            else:
+        elif email.strip() and (
+            "@" not in email or "." not in email.split("@")[-1]
+        ):
+            st.error("Please enter a valid email address.")
 
-                st.session_state.profile = {
-                    "name": name.strip(),
-                    "email": email.strip(),
-                    "status": status,
-                    "education": education,
-                    "field": field,
-                    "goal": goal,
-                    "interests": interests
-                }
+        else:
 
-                navigate("Assessment")
+            new_profile = {
+                "name": name.strip(),
+                "email": email.strip(),
+                "status": status,
+                "education": education,
+                "field": field,
+                "goal": goal,
+                "interests": interests
+            }
+
+            if new_profile != old:
+                reset_assessment()
+
+            st.session_state.profile = new_profile
+
+            navigate("Assessment")
 
     if st.button("← Back to Welcome"):
         navigate("Welcome")
@@ -695,9 +812,9 @@ elif st.session_state.page == "Assessment":
 
     else:
 
-        st.write(
-            f"Welcome, **{st.session_state.profile['name']}**!"
-        )
+        student_name = st.session_state.profile["name"]
+
+        st.write(f"Welcome, **{student_name}**!")
 
         st.write(
             "Rate your current skills from 0 to 10. "
@@ -717,21 +834,29 @@ elif st.session_state.page == "Assessment":
             with c1:
 
                 ratings["Python"] = st.slider(
-                    "Python", 0, 10, int(ratings["Python"])
+                    "Python",
+                    0, 10,
+                    int(ratings["Python"])
                 )
 
                 ratings["DataAnalysis"] = st.slider(
-                    "Data Analysis", 0, 10, int(ratings["DataAnalysis"])
+                    "Data Analysis",
+                    0, 10,
+                    int(ratings["DataAnalysis"])
                 )
 
             with c2:
 
                 ratings["Maths"] = st.slider(
-                    "Mathematics", 0, 10, int(ratings["Maths"])
+                    "Mathematics",
+                    0, 10,
+                    int(ratings["Maths"])
                 )
 
                 ratings["ProblemSolving"] = st.slider(
-                    "Problem Solving", 0, 10, int(ratings["ProblemSolving"])
+                    "Problem Solving",
+                    0, 10,
+                    int(ratings["ProblemSolving"])
                 )
 
             st.divider()
@@ -743,21 +868,29 @@ elif st.session_state.page == "Assessment":
             with c3:
 
                 ratings["Communication"] = st.slider(
-                    "Communication", 0, 10, int(ratings["Communication"])
+                    "Communication",
+                    0, 10,
+                    int(ratings["Communication"])
                 )
 
                 ratings["Creativity"] = st.slider(
-                    "Creativity", 0, 10, int(ratings["Creativity"])
+                    "Creativity",
+                    0, 10,
+                    int(ratings["Creativity"])
                 )
 
             with c4:
 
                 ratings["Business"] = st.slider(
-                    "Business", 0, 10, int(ratings["Business"])
+                    "Business",
+                    0, 10,
+                    int(ratings["Business"])
                 )
 
                 ratings["Design"] = st.slider(
-                    "Design", 0, 10, int(ratings["Design"])
+                    "Design",
+                    0, 10,
+                    int(ratings["Design"])
                 )
 
             st.write("")
@@ -768,51 +901,51 @@ elif st.session_state.page == "Assessment":
                 use_container_width=True
             )
 
-            if submit:
+        if submit:
 
-                st.session_state.ratings = ratings
+            st.session_state.ratings = ratings
 
-                results, method = recommend_careers(ratings)
+            results, method = recommend_careers(ratings)
 
-                if isinstance(results, pd.DataFrame):
-                    results = results.to_dict(orient="records")
+            if isinstance(results, pd.DataFrame):
+                results = results.to_dict(orient="records")
 
-                if not isinstance(results, list):
-                    results = []
+            if not isinstance(results, list):
+                results = []
 
-                results = [
-                    item for item in results
-                    if isinstance(item, dict)
-                    and item.get("career") is not None
-                ]
+            results = [
+                item for item in results
+                if isinstance(item, dict)
+                and item.get("career") is not None
+                and item.get("score") is not None
+            ]
 
-                if results:
+            if results:
 
-                    st.session_state.results = results
-                    st.session_state.method = method
-                    st.session_state.assessment_done = True
+                st.session_state.results = results
+                st.session_state.method = method
+                st.session_state.assessment_done = True
 
-                    navigate("Results")
+                navigate("Results")
 
-                else:
-                    st.error("Unable to generate recommendations.")
+            else:
+                st.error("Unable to generate recommendations.")
 
         col1, col2 = st.columns(2)
 
         with col1:
-            if st.button("← Back to Profile", use_container_width=True):
+            if st.button(
+                "← Back to Profile",
+                use_container_width=True
+            ):
                 navigate("Profile")
 
         with col2:
-            if st.button("Reset Assessment", use_container_width=True):
-
-                st.session_state.ratings = {
-                    f: 5 for f in FEATURES
-                }
-
-                st.session_state.assessment_done = False
-                st.session_state.results = []
-
+            if st.button(
+                "Reset Assessment",
+                use_container_width=True
+            ):
+                reset_assessment()
                 st.rerun()
 
 
@@ -833,14 +966,18 @@ elif st.session_state.page == "Results":
 
     if not st.session_state.assessment_done or not results:
 
-        st.info("Complete your assessment to view your career results.")
+        st.info(
+            "Complete your assessment to view your career results."
+        )
 
         if st.button("Start Assessment →", type="primary"):
             navigate("Assessment")
 
     else:
 
-        name = st.session_state.profile.get("name", "Student")
+        name = st.session_state.profile.get(
+            "name", "Student"
+        )
 
         st.success(f"Assessment completed for {name}!")
 
@@ -853,11 +990,33 @@ elif st.session_state.page == "Results":
             "Scores are guidance, not guarantees of career suitability."
         )
 
+        # Convert scores safely into numbers.
+
+        valid_results = []
+
+        for item in results:
+            try:
+                career = str(item["career"])
+                score = float(item["score"])
+
+                if pd.notna(score):
+                    valid_results.append({
+                        "career": career,
+                        "score": score
+                    })
+
+            except (ValueError, TypeError, KeyError):
+                continue
+
         results = sorted(
-            results,
-            key=lambda x: float(x.get("score", 0)),
+            valid_results,
+            key=lambda x: x["score"],
             reverse=True
         )
+
+        if not results:
+            st.error("No valid career results are available.")
+            st.stop()
 
         best_career = results[0]["career"]
 
@@ -866,7 +1025,7 @@ elif st.session_state.page == "Results":
         for rank, result in enumerate(results[:3], start=1):
 
             career = result["career"]
-            score = float(result.get("score", 0))
+            score = result["score"]
 
             details = CAREERS.get(
                 career,
@@ -878,35 +1037,44 @@ elif st.session_state.page == "Results":
                 }
             )
 
+            safe_career = html.escape(career)
+            safe_description = html.escape(
+                details["description"]
+            )
+
+            # HTML kept left-aligned to prevent code rendering.
+
             st.markdown(
                 f"""
-                <div class="career-card">
-                    <h3>{details['icon']} #{rank} {html.escape(career)}</h3>
-                    <p>{html.escape(details['description'])}</p>
-                    <div class="score">Relative Score: {score:.2f}%</div>
-                </div>
-                """,
+<div class="career-card">
+    <h3>{details['icon']} #{rank} {safe_career}</h3>
+    <p>{safe_description}</p>
+    <div class="score">Relative Score: {score:.2f}%</div>
+</div>
+""",
                 unsafe_allow_html=True
             )
 
             c1, c2 = st.columns(2)
 
             with c1:
+
                 st.markdown("**💡 Related Skills**")
 
                 for skill in details["skills"]:
-                    st.write("•", skill)
+                    st.write(f"• {skill}")
 
             with c2:
+
                 st.markdown("**📚 Areas to Develop**")
 
                 for skill in details["improve"]:
-                    st.write("•", skill)
+                    st.write(f"• {skill}")
 
             st.divider()
 
         # =================================================
-        # SKILL PROFILE - TYPEERROR FIXED
+        # SKILL PROFILE
         # =================================================
 
         st.subheader("📊 Your Skill Profile")
@@ -914,7 +1082,7 @@ elif st.session_state.page == "Results":
         skill_df = pd.DataFrame({
             "Skill": FEATURES,
             "Rating": [
-                st.session_state.ratings[f]
+                int(st.session_state.ratings.get(f, 5))
                 for f in FEATURES
             ]
         })
@@ -923,20 +1091,24 @@ elif st.session_state.page == "Results":
             skill_df.set_index("Skill")
         )
 
-        st.caption("Skill ratings are measured on a scale of 0 to 10.")
+        st.caption(
+            "Skill ratings are measured on a scale of 0 to 10."
+        )
 
         # =================================================
-        # FULL RANKING
+        # COMPLETE CAREER RANKING
         # =================================================
 
         st.subheader("📈 Complete Career Ranking")
 
         ranking_df = pd.DataFrame(results)
 
-        ranking_df = ranking_df.rename(columns={
-            "career": "Career",
-            "score": "Relative Score (%)"
-        })
+        ranking_df = ranking_df.rename(
+            columns={
+                "career": "Career",
+                "score": "Relative Score (%)"
+            }
+        )
 
         st.dataframe(
             ranking_df,
@@ -945,8 +1117,10 @@ elif st.session_state.page == "Results":
         )
 
         # =================================================
-        # DOWNLOAD REPORT
+        # DOWNLOAD CAREER REPORT
         # =================================================
+
+        st.subheader("📥 Download Your Career Report")
 
         report = pd.DataFrame([{
             "Student": name,
@@ -960,7 +1134,7 @@ elif st.session_state.page == "Results":
         }])
 
         st.download_button(
-            "⬇️ Download Career Report",
+            label="⬇️ Download Career Report",
             data=report.to_csv(index=False).encode("utf-8"),
             file_name="career_report.csv",
             mime="text/csv",
@@ -972,19 +1146,23 @@ elif st.session_state.page == "Results":
         c1, c2 = st.columns(2)
 
         with c1:
-            if st.button("← Edit Assessment", use_container_width=True):
+
+            if st.button(
+                "← Edit Assessment",
+                use_container_width=True
+            ):
                 navigate("Assessment")
 
         with c2:
-            if st.button("Start New Assessment", use_container_width=True):
+
+            if st.button(
+                "Start New Assessment",
+                use_container_width=True
+            ):
 
                 st.session_state.profile = {}
-                st.session_state.ratings = {
-                    f: 5 for f in FEATURES
-                }
-                st.session_state.results = []
-                st.session_state.method = ""
-                st.session_state.assessment_done = False
+
+                reset_assessment()
 
                 navigate("Welcome")
 
@@ -993,12 +1171,11 @@ elif st.session_state.page == "Results":
 # FOOTER
 # =====================================================
 
-st.markdown(
-    """
-    <div class="footer">
-        CareerPath © 2026 | AI Career Recommendation System
-        <p>Discover Your Strengths. Shape Your Future.</p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+st.divider()
+
+st.markdown("""
+<div class="footer">
+    CareerPath © 2026 | AI Career Recommendation System
+    <p>Discover Your Strengths. Shape Your Future.</p>
+</div>
+""", unsafe_allow_html=True)
