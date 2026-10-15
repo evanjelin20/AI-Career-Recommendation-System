@@ -1,142 +1,139 @@
 
-# --------------------------------------------------
-# PROFESSIONAL WELCOME PAGE
-# --------------------------------------------------
-if st.session_state.page == "welcome":
+import streamlit as st
+import pandas as pd
+import numpy as np
+import joblib
+from pathlib import Path
 
-    st.markdown("""
-    <style>
-    .welcome-hero {
-        background: linear-gradient(135deg, #101a35, #25396a);
-        padding: 36px 28px;
-        border-radius: 22px;
-        border: 1px solid #405582;
-        margin-bottom: 24px;
-    }
-    .welcome-tag {
-        color: #7ee7f5;
-        letter-spacing: 2px;
-        font-size: 12px;
-        font-weight: 700;
-    }
-    .welcome-title {
-        color: white;
-        font-size: clamp(30px, 4vw, 48px);
-        font-weight: 800;
-        line-height: 1.15;
-        margin: 16px 0;
-    }
-    .welcome-description {
-        color: #d2dcf3;
-        font-size: 16px;
-        line-height: 1.8;
-    }
-    .feature-card {
-        background: #172441;
-        border: 1px solid #354769;
-        padding: 20px;
-        border-radius: 16px;
-        min-height: 165px;
-    }
-    .feature-card p {
-        color: #c4cfe5;
-        line-height: 1.6;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+st.set_page_config(
+    page_title="AI Career Recommendation System",
+    page_icon="🧭",
+    layout="wide"
+)
 
-    # Main hero section
-    left, right = st.columns([1.15, 0.85], gap="large")
+# IMPORTANT: Initialize state before checking the page
+if "page" not in st.session_state:
+    st.session_state["page"] = "welcome"
 
-    with left:
-        st.markdown("""
-        <div class="welcome-hero">
-            <div class="welcome-tag">AI-POWERED CAREER EXPLORATION</div>
-            <div class="welcome-title">
-                Discover Your<br>
-                <span style="color:#7ee7f5;">Career Direction.</span>
-            </div>
-            <p class="welcome-description">
-                Your skills are the beginning of your story.
-                Discover career possibilities, understand your strengths,
-                and take your next step with confidence.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
+if "name" not in st.session_state:
+    st.session_state["name"] = ""
 
-        st.markdown("### Your future starts with one step")
-        st.write(
-            "Complete a short profile and skills assessment to explore "
-            "career options suggested by our machine-learning model."
+if "profession" not in st.session_state:
+    st.session_state["profession"] = "Student"
+
+if "other_role" not in st.session_state:
+    st.session_state["other_role"] = ""
+
+if "results" not in st.session_state:
+    st.session_state["results"] = None
+
+if "skill_scores" not in st.session_state:
+    st.session_state["skill_scores"] = None
+
+# Your page conditions must come AFTER initialization
+if st.session_state["page"] == "welcome":
+    st.title("🧭 Career Compass")
+    st.subheader("Discover Your Career Direction")
+    st.write(
+        "Explore career options based on your skills, strengths, "
+        "and interests."
+    )
+
+    st.image(
+        "https://images.unsplash.com/photo-1521737711867-e3b97375f902"
+        "?auto=format&fit=crop&w=1200&q=85",
+        use_container_width=True
+    )
+
+    if st.button("🚀 Get Started", type="primary"):
+        st.session_state["page"] = "profile"
+        st.rerun()
+
+elif st.session_state["page"] == "profile":
+    st.title("👤 Your Profile")
+
+    with st.form("profile_form"):
+        name = st.text_input("Enter your name")
+        profession = st.selectbox(
+            "Select your role",
+            [
+                "Student",
+                "Working Professional",
+                "Job Seeker",
+                "Entrepreneur",
+                "Other"
+            ]
         )
 
-        if st.button(
-            "🚀  Get Started",
-            type="primary",
-            use_container_width=True
-        ):
-            st.session_state.page = "profile"
+        submitted = st.form_submit_button("Continue to Assessment")
+
+        if submitted:
+            if not name.strip():
+                st.error("Please enter your name.")
+            else:
+                st.session_state["name"] = name.strip()
+                st.session_state["profession"] = profession
+                st.session_state["page"] = "assessment"
+                st.rerun()
+
+elif st.session_state["page"] == "assessment":
+    st.title("🧠 Skill Assessment")
+    st.write("Rate your current skills from 0 to 10.")
+
+    with st.form("assessment_form"):
+        python_score = st.slider("Python", 0, 10, 5)
+        maths_score = st.slider("Mathematics", 0, 10, 5)
+        communication_score = st.slider("Communication", 0, 10, 5)
+        creativity_score = st.slider("Creativity", 0, 10, 5)
+        business_score = st.slider("Business", 0, 10, 5)
+        design_score = st.slider("Design", 0, 10, 5)
+        problem_solving_score = st.slider("Problem Solving", 0, 10, 5)
+        data_analysis_score = st.slider("Data Analysis", 0, 10, 5)
+
+        submitted = st.form_submit_button("Generate Recommendations")
+
+    if submitted:
+        features = pd.DataFrame([{
+            "Python": python_score,
+            "Maths": maths_score,
+            "Communication": communication_score,
+            "Creativity": creativity_score,
+            "Business": business_score,
+            "Design": design_score,
+            "ProblemSolving": problem_solving_score,
+            "DataAnalysis": data_analysis_score
+        }])
+
+        try:
+            model_path = Path(__file__).parent / "career_model.joblib"
+            model = joblib.load(model_path)
+
+            prediction = model.predict(features)[0]
+
+            st.session_state["results"] = str(prediction)
+            st.session_state["skill_scores"] = features.iloc[0].to_dict()
+            st.session_state["page"] = "results"
             st.rerun()
 
-        st.caption("Free career exploration • Simple assessment • Instant results")
+        except Exception as error:
+            st.error("Could not generate a prediction.")
+            st.code(str(error))
 
-    with right:
-        # Professional workplace photograph
-        st.image(
-            "https://images.unsplash.com/photo-1521737711867-e3b97375f902"
-            "?auto=format&fit=crop&w=1000&q=85",
-            caption="Explore your potential. Build your future.",
-            use_container_width=True
-        )
-
-        st.markdown("""
-        <div style="
-            background:#172441;
-            padding:18px;
-            border-radius:15px;
-            border:1px solid #354769;
-            margin-top:8px;">
-            <div style="color:#7ee7f5;font-weight:700;">
-                YOUR PERSONAL CAREER COMPASS
-            </div>
-            <p style="color:#c4cfe5;line-height:1.7;margin-bottom:0;">
-                Start with your strengths. Explore your options.
-                Create a direction for your future.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("---")
-    st.markdown("### Your journey, simplified")
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.markdown("""
-        <div class="feature-card">
-            <h3>01 👤 Your Profile</h3>
-            <p>Tell us your name and current role.</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col2:
-        st.markdown("""
-        <div class="feature-card">
-            <h3>02 🧠 Assessment</h3>
-            <p>Rate your skills and strengths honestly.</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col3:
-        st.markdown("""
-        <div class="feature-card">
-            <h3>03 🎯 Career Results</h3>
-            <p>Explore career suggestions and relevant skills.</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("")
-    st.caption(
-        "Note: Recommendations support career exploration; "
-        "they do not guarantee employment or career success."
+elif st.session_state["page"] == "results":
+    st.title("🎯 Your Career Recommendation")
+    st.success(
+        f"Hello, {st.session_state['name']}! "
+        f"Your model's suggested career is: "
+        f"{st.session_state['results']}"
     )
+
+    st.write("Your skill ratings:")
+    st.json(st.session_state["skill_scores"])
+
+    if st.button("Retake Assessment"):
+        st.session_state["page"] = "assessment"
+        st.rerun()
+
+    if st.button("Back to Home"):
+        st.session_state["page"] = "welcome"
+        st.rerun()
